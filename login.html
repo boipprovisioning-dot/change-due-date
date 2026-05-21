@@ -161,7 +161,7 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
 <script>
 
 // ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
-const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
+const API = 'https://script.google.com/macros/s/AKfycbxaclzBtrqOq1TWZTfkZilPPXZj0c6Vqf4d-GQs2TvLGQVesYamSkrUgbQcAOF1Noid/exec';
 
 async function GET(params) {
   const u = new URL(API);
@@ -195,6 +195,14 @@ async function POST(body) {
    5. Deploy → Copy URL แล้วแทนที่ข้อความด้านล่าง
 ══════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════ */
+
+
+
+,body:JSON.stringify(body)});
+  const j=await r.json();
+  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
+  return j.data;
+}
 
 function tpw(id,eid){
   const el=document.getElementById(id),ic=document.getElementById(eid);
