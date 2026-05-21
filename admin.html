@@ -300,12 +300,36 @@ tr:hover td{background:var(--g50)}
 <div class="toast-ct" id="toastCt"></div>
 
 <script>
+
+// ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
+
+async function GET(params) {
+  const u = new URL(API);
+  Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
+async function POST(body) {
+  // ส่งเป็น GET+payload เพื่อหลีกเลี่ยง CORS
+  const action = body.action;
+  const payload = encodeURIComponent(JSON.stringify(body));
+  const u = new URL(API);
+  u.searchParams.set('action', action);
+  u.searchParams.set('payload', payload);
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
 // ── Auth ──────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════
+
 // ⚙️  ใส่ Web App URL ที่นี่ (เผื่อเปิดไฟล์โดยตรง)
-const API_URL = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
-// ═══════════════════════════════════════════════════════════
-const API   = sessionStorage.getItem('rsch_api') || API_URL;
+
 const UNAME = sessionStorage.getItem('rsch_username') || '';
 const FNAME = sessionStorage.getItem('rsch_fullname') || '';
 const CC    = 'nsa-team@truecorp.co.th;bo-ip-pro@ericsson.com;tanawat.thinsiriphat@ericsson.com';
@@ -321,17 +345,7 @@ const CC    = 'nsa-team@truecorp.co.th;bo-ip-pro@ericsson.com;tanawat.thinsiriph
 function doLogout(){ sessionStorage.clear(); window.location.href = 'login.html'; }
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false}); }, 1000);
 
-// ── API helpers ───────────────────────────────────────────────
-async function GET(params){
-  const u = new URL(API);
-  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
-  return j.data;
-}
-async function POST(body){
-  const r = await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+,body:JSON.stringify(body)});
   const j = await r.json();
   if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
   return j.data;

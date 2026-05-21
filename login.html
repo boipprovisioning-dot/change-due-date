@@ -159,6 +159,32 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
 </div>
 
 <script>
+
+// ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
+
+async function GET(params) {
+  const u = new URL(API);
+  Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
+async function POST(body) {
+  // ส่งเป็น GET+payload เพื่อหลีกเลี่ยง CORS
+  const action = body.action;
+  const payload = encodeURIComponent(JSON.stringify(body));
+  const u = new URL(API);
+  u.searchParams.set('action', action);
+  u.searchParams.set('payload', payload);
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
 /* ══════════════════════════════════════════════════════
    ⚙️  ตั้งค่า URL ของ Google Apps Script Web App ที่นี่
    วิธีได้ URL:
@@ -168,21 +194,11 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
    4. Who has access: Anyone
    5. Deploy → Copy URL แล้วแทนที่ข้อความด้านล่าง
 ══════════════════════════════════════════════════════ */
-const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
 /* ══════════════════════════════════════════════════════ */
 
 
 
-async function GET(params){
-  const u=new URL(API);
-  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
-  const r=await fetch(u.toString());
-  const j=await r.json();
-  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
-  return j.data;
-}
-async function POST(body){
-  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+,body:JSON.stringify(body)});
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
   return j.data;

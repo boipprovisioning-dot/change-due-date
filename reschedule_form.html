@@ -227,12 +227,36 @@ footer{text-align:center;padding:1.5rem;font-size:12px;color:var(--g500);border-
 <footer>ระบบเลื่อนนัดติดตั้ง | ข้อมูลบันทึกใน Google Sheets</footer>
 
 <script>
+
+// ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
+
+async function GET(params) {
+  const u = new URL(API);
+  Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
+async function POST(body) {
+  // ส่งเป็น GET+payload เพื่อหลีกเลี่ยง CORS
+  const action = body.action;
+  const payload = encodeURIComponent(JSON.stringify(body));
+  const u = new URL(API);
+  u.searchParams.set('action', action);
+  u.searchParams.set('payload', payload);
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
 // ── Auth ──────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════
+
 // ⚙️  ใส่ Web App URL ที่นี่ (เผื่อเปิดไฟล์โดยตรง)
-const API_URL = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
-// ═══════════════════════════════════════════════════════════
-const API   = sessionStorage.getItem('rsch_api') || API_URL;
+
 const UNAME = sessionStorage.getItem('rsch_username') || '';
 const FNAME = sessionStorage.getItem('rsch_fullname') || '';
 const ROLE  = sessionStorage.getItem('rsch_role')     || '';
@@ -251,21 +275,7 @@ function doLogout(){
   window.location.href = 'login.html';
 }
 
-// ── API helpers ───────────────────────────────────────────────
-async function POST(body){
-  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
-}
-async function GET(params){
-  const u = new URL(API);
-  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
-}
+
 
 // ── Clock ─────────────────────────────────────────────────────
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false}); }, 1000);
