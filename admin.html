@@ -537,7 +537,8 @@ function quickEmail(id){
 async function sendEmail(){
   const r=allRecs.find(x=>String(x.id)===String(curId)); if(!r) return;
   const{subj,body,to}=buildEmail(r);
-  window.location.href=`mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(CC)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+  const mailUrl=`mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(CC)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+  window.open(mailUrl);
   document.getElementById('ovEmail').classList.remove('show');
   try{
     await POST({action:'updateEmailStatus', id: curId, emailSentAt: new Date().toISOString()});
