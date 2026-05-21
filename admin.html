@@ -374,6 +374,17 @@ function popFilters(){
   fs.innerHTML='<option value="">Staff ทั้งหมด</option>'+staffs.map(s=>`<option value="${s}"${s===sv?' selected':''}>${s}</option>`).join('');
 }
 
+// ── Timestamp formatter ──────────────────────────────────────
+function fmtTs(ts){
+  if(!ts) return '—';
+  // รองรับทั้ง ISO format และ format อื่นๆ
+  const d = new Date(ts);
+  if(isNaN(d)) return ts; // ถ้า parse ไม่ได้ให้แสดงตามเดิม
+  const date = d.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const time = d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
+  return date+' '+time;
+}
+
 // ── Table ─────────────────────────────────────────────────────
 function renderTable(){
   const q  = document.getElementById('aSearch').value.toLowerCase();
@@ -413,7 +424,7 @@ function renderPage(){
     const sd=isSent?`<span class="sdot sent"><span class="dot"></span>ดำเนินการแล้ว</span>`:`<span class="sdot pend"><span class="dot"></span>รอดำเนินการ</span>`;
     return`<tr onclick="showDetail('${r.id}')" style="cursor:pointer">
       <td><span class="badge bb">${st+i+1}</span></td>
-      <td style="font-size:11px;color:var(--g500)">${r.timestamp||'—'}</td>
+      <td style="font-size:11px;color:var(--g500)">${fmtTs(r.timestamp)}</td>
       <td><span class="mono">${r.circuit||'—'}</span></td>
       <td style="font-weight:500">${r.customer||'—'}</td>
       <td style="font-size:12px;color:var(--t600);font-weight:500">${r.new_due_date||'—'}</td>
