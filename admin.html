@@ -537,8 +537,11 @@ function quickEmail(id){
 async function sendEmail(){
   const r=allRecs.find(x=>String(x.id)===String(curId)); if(!r) return;
   const{subj,body,to}=buildEmail(r);
-  const mailUrl=`mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(CC)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
-  window.open(mailUrl);
+  const mailUrl=`mailto:${to}?cc=${encodeURIComponent(CC)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+  // เปิด mail client โดยไม่ navigate ออกจากหน้า
+  const a=document.createElement('a');
+  a.href=mailUrl; a.target='_blank'; a.rel='noopener';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   document.getElementById('ovEmail').classList.remove('show');
   try{
     await POST({action:'updateEmailStatus', id: curId, emailSentAt: new Date().toISOString()});
