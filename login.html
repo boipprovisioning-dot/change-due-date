@@ -196,14 +196,6 @@ async function POST(body) {
 ══════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════ */
 
-
-
-,body:JSON.stringify(body)});
-  const j=await r.json();
-  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
-  return j.data;
-}
-
 function tpw(id,eid){
   const el=document.getElementById(id),ic=document.getElementById(eid);
   el.type=el.type==='password'?'text':'password';
