@@ -209,7 +209,7 @@ tr:hover td{background:var(--g50)}
         <div class="tc-hdr"><div class="tc-title">รายการเลื่อนนัด</div><span class="tc-cnt" id="tableCnt">0 รายการ</span></div>
         <div class="tw"><table>
           <thead><tr><th onclick="sortBy('id')">#</th><th onclick="sortBy('timestamp')">วันที่บันทึก</th><th onclick="sortBy('circuit')">Circuit</th><th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('due_date')">Due Date เดิม</th><th onclick="sortBy('new_due_date')">Change Due Date</th><th onclick="sortBy('staff')">Staff</th><th>Email ผู้ส่ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-          <tbody id="tableBody"><tr class="loading-row"><td colspan="9">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr></tbody>
+          <tbody id="tableBody"><tr class="loading-row"><td colspan="10">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr></tbody>
         </table></div>
         <div class="pag"><div id="pagInfo">—</div><div class="pb" id="pagBtns"></div></div>
       </div>
@@ -307,10 +307,19 @@ const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-
 async function GET(params) {
   const u = new URL(API);
   Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = await fetch(u.toString(), {signal: controller.signal});
+    clearTimeout(timer);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+    return j.data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('หมดเวลา (timeout) — กรุณาตรวจสอบ Apps Script URL');
+    throw e;
+  }
 }
 
 async function POST(body) {
@@ -320,10 +329,19 @@ async function POST(body) {
   const u = new URL(API);
   u.searchParams.set('action', action);
   u.searchParams.set('payload', payload);
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = await fetch(u.toString(), {signal: controller.signal});
+    clearTimeout(timer);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+    return j.data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('หมดเวลา (timeout) — กรุณาตรวจสอบ Apps Script URL');
+    throw e;
+  }
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -335,10 +353,13 @@ const FNAME = sessionStorage.getItem('rsch_fullname') || '';
 const CC    = 'nsa-team@truecorp.co.th;bo-ip-pro@ericsson.com;tanawat.thinsiriphat@ericsson.com';
 
 (function checkAuth(){
-  if(sessionStorage.getItem('rsch_admin') !== 'true'){
+  const isAdmin = sessionStorage.getItem('rsch_admin') === 'true';
+  const role    = sessionStorage.getItem('rsch_role') || '';
+  if(!isAdmin && role !== 'admin'){
     document.getElementById('authBlock').classList.add('show'); return;
   }
-  document.getElementById('sbUname').textContent = FNAME || UNAME;
+  // ถ้า rsch_admin ไม่ได้ set แต่ role=admin ก็ยังให้ผ่าน
+  document.getElementById('sbUname').textContent = FNAME || UNAME || 'Admin';
   loadData();
 })();
 
@@ -349,14 +370,17 @@ setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLo
 let allRecs=[], filtered=[], curPage=1, PAGE=15, sortCol='id', sortDir='desc', curId=null;
 
 async function loadData(){
+  document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="10">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr>`;
   try{
     allRecs = await GET({action:'getRecords'});
     allRecs = (allRecs||[]).map(r=>({...r, id: r.id||Date.now()}));
     updateStats(); popFilters(); renderTable(); renderStats();
     if(document.getElementById('tabUsers').style.display !== 'none') renderUsers();
   }catch(err){
-    toast('โหลดข้อมูลไม่สำเร็จ: '+err.message,'err');
-    document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="9">❌ โหลดข้อมูลไม่สำเร็จ — <a href="#" onclick="loadData()">ลองอีกครั้ง</a></td></tr>`;
+    const msg = err.message || String(err);
+    toast('โหลดข้อมูลไม่สำเร็จ: '+msg,'err');
+    document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="10">❌ โหลดข้อมูลไม่สำเร็จ: ${msg} — <a href="#" onclick="loadData()">ลองอีกครั้ง</a></td></tr>`;
+    document.getElementById('stTotal').textContent='ERR';
   }
 }
 
@@ -407,7 +431,7 @@ function renderPage(){
   document.getElementById('pagInfo').textContent = filtered.length?`แสดง ${st+1}–${en} จาก ${filtered.length}`:'ไม่พบข้อมูล';
   const rb=r=>{const n=parseInt((r||'').split('_')[0]);if(n>=6500&&n<6700)return'bb';if(n>=6800&&n<7000)return'bt';if(n>=8800&&n<9200)return'ba';return'bc2';};
   const tbody=document.getElementById('tableBody');
-  if(!page.length){ tbody.innerHTML=`<tr class="loading-row"><td colspan="9">📋 ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`; document.getElementById('pagBtns').innerHTML=''; return; }
+  if(!page.length){ tbody.innerHTML=`<tr class="loading-row"><td colspan="10">📋 ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`; document.getElementById('pagBtns').innerHTML=''; return; }
   tbody.innerHTML=page.map((r,i)=>{
     const isSent=r.emailStatus==='sent';
     const sd=isSent?`<span class="sdot sent"><span class="dot"></span>ดำเนินการแล้ว</span>`:`<span class="sdot pend"><span class="dot"></span>รอดำเนินการ</span>`;

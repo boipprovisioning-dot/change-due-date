@@ -234,23 +234,40 @@ const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-
 async function GET(params) {
   const u = new URL(API);
   Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = await fetch(u.toString(), {signal: controller.signal});
+    clearTimeout(timer);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+    return j.data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
+    throw e;
+  }
 }
 
 async function POST(body) {
-  // ส่งเป็น GET+payload เพื่อหลีกเลี่ยง CORS
   const action = body.action;
   const payload = encodeURIComponent(JSON.stringify(body));
   const u = new URL(API);
   u.searchParams.set('action', action);
   u.searchParams.set('payload', payload);
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = await fetch(u.toString(), {signal: controller.signal});
+    clearTimeout(timer);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+    return j.data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
+    throw e;
+  }
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -305,17 +322,12 @@ function prog(){
 }
 
 // ── Form Data ─────────────────────────────────────────────────
-function parseDate(val) {
-  // Input date gives YYYY-MM-DD, store as-is (clean ISO date without time)
-  return val || '';
-}
-
 function getFormData(){
   return {
     timestamp: new Date().toLocaleString('th-TH'),
     submittedBy: UNAME,
     circuit: fv('circuit'), customer: fv('customer'),
-    due_date: parseDate(fv('due_date')), new_due_date: parseDate(fv('new_due_date')),
+    due_date: fv('due_date'), new_due_date: fv('new_due_date'),
     staff: fv('staff'), sender_phone: fv('sender_phone'), sender_email: fv('sender_email'),
     rd_reason: fv('rd_reason'), ae_name: fv('ae_name'), ae_phone: fv('ae_phone'),
     remark: fv('remark')

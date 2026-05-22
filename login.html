@@ -161,28 +161,45 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
 <script>
 
 // ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
-const API = 'https://script.google.com/macros/s/AKfycbwnDqgcq0T677YeI7QoLz0spjMUpV8EoIsRFKhlGxbEfyTYFvjUKnKDmuNjf0Oz24dZ/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
 
 async function GET(params) {
   const u = new URL(API);
   Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = await fetch(u.toString(), {signal: controller.signal});
+    clearTimeout(timer);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+    return j.data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
+    throw e;
+  }
 }
 
 async function POST(body) {
-  // ส่งเป็น GET+payload เพื่อหลีกเลี่ยง CORS
   const action = body.action;
   const payload = encodeURIComponent(JSON.stringify(body));
   const u = new URL(API);
   u.searchParams.set('action', action);
   u.searchParams.set('payload', payload);
-  const r = await fetch(u.toString());
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-  return j.data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = await fetch(u.toString(), {signal: controller.signal});
+    clearTimeout(timer);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+    return j.data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
+    throw e;
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -195,6 +212,10 @@ async function POST(body) {
    5. Deploy → Copy URL แล้วแทนที่ข้อความด้านล่าง
 ══════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════ */
+
+
+
+
 
 function tpw(id,eid){
   const el=document.getElementById(id),ic=document.getElementById(eid);
