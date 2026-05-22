@@ -221,8 +221,8 @@ tr:hover td{background:var(--g50)}
       <div class="tc">
         <div class="tc-hdr"><div class="tc-title">รายการเลื่อนนัด</div><span class="tc-cnt" id="tableCnt">0 รายการ</span></div>
         <div class="tw"><table>
-          <thead><tr><th onclick="sortBy('id')">#</th><th onclick="sortBy('timestamp')">วันที่บันทึก</th><th onclick="sortBy('circuit')">Circuit</th><th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('new_due_date')">Change Date</th><th onclick="sortBy('staff')">Staff</th><th>Email ผู้ส่ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-          <tbody id="tableBody"><tr class="loading-row"><td colspan="9">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr></tbody>
+          <thead><tr><th onclick="sortBy('id')">#</th><th onclick="sortBy('timestamp')">วันที่บันทึก</th><th onclick="sortBy('circuit')">Circuit</th><th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('due_date')">Due Date เดิม</th><th onclick="sortBy('new_due_date')">Change Date</th><th onclick="sortBy('staff')">Staff</th><th>Email ผู้ส่ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+          <tbody id="tableBody"><tr class="loading-row"><td colspan="10">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr></tbody>
         </table></div>
         <div class="pag"><div id="pagInfo">—</div><div class="pb" id="pagBtns"></div></div>
       </div>
@@ -400,7 +400,7 @@ async function loadData(){
     if(document.getElementById('tabUsers').style.display !== 'none') renderUsers();
   }catch(err){
     toast('โหลดข้อมูลไม่สำเร็จ: '+err.message,'err');
-    document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="9">❌ โหลดข้อมูลไม่สำเร็จ — <a href="#" onclick="loadData()">ลองอีกครั้ง</a></td></tr>`;
+    document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="10">❌ โหลดข้อมูลไม่สำเร็จ — <a href="#" onclick="loadData()">ลองอีกครั้ง</a></td></tr>`;
   }
 }
 
@@ -451,7 +451,7 @@ function renderPage(){
   document.getElementById('pagInfo').textContent = filtered.length?`แสดง ${st+1}–${en} จาก ${filtered.length}`:'ไม่พบข้อมูล';
   const rb=r=>{const n=parseInt((r||'').split('_')[0]);if(n>=6500&&n<6700)return'bb';if(n>=6800&&n<7000)return'bt';if(n>=8800&&n<9200)return'ba';return'bc2';};
   const tbody=document.getElementById('tableBody');
-  if(!page.length){ tbody.innerHTML=`<tr class="loading-row"><td colspan="9">📋 ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`; document.getElementById('pagBtns').innerHTML=''; return; }
+  if(!page.length){ tbody.innerHTML=`<tr class="loading-row"><td colspan="10">📋 ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`; document.getElementById('pagBtns').innerHTML=''; return; }
   tbody.innerHTML=page.map((r,i)=>{
     const isSent=r.emailStatus==='sent';
     const sd=isSent?`<span class="sdot sent"><span class="dot"></span>ดำเนินการแล้ว</span>`:`<span class="sdot pend"><span class="dot"></span>รอดำเนินการ</span>`;
@@ -460,6 +460,7 @@ function renderPage(){
       <td style="font-size:11px;color:var(--g500)">${r.timestamp||'—'}</td>
       <td><span class="mono">${r.circuit||'—'}</span></td>
       <td style="font-weight:500">${r.customer||'—'}</td>
+      <td style="font-size:12px;color:var(--g600)">${r.due_date||'—'}</td>
       <td style="font-size:12px;color:var(--t600);font-weight:500">${r.new_due_date||'—'}</td>
       <td style="font-size:12px">${(r.staff||'').split('_')[1]||r.staff||'—'}</td>
       <td>${r.sender_email?`<span class="echip" title="${r.sender_email}">✉ ${r.sender_email.length>22?r.sender_email.substring(0,20)+'…':r.sender_email}</span>`:'<span style="color:var(--g300);font-size:12px">—</span>'}</td>

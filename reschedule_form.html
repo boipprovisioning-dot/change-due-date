@@ -310,11 +310,21 @@ function prog(){
 
 // ── Form Data ─────────────────────────────────────────────────
 function getFormData(){
+  // format วันที่แบบ dd/mm/yyyy ไม่มี timezone
+  function fmtDate(val){
+    if(!val) return '';
+    const [y,m,d] = val.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  // timestamp แบบ dd/mm/yyyy HH:MM ไม่มี timezone
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const ts = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   return {
-    timestamp: new Date().toLocaleString('th-TH'),
+    timestamp: ts,
     submittedBy: UNAME,
     circuit: fv('circuit'), customer: fv('customer'),
-    due_date: fv('due_date'), new_due_date: fv('new_due_date'),
+    due_date: fmtDate(fv('due_date')), new_due_date: fmtDate(fv('new_due_date')),
     staff: fv('staff'), sender_phone: fv('sender_phone'), sender_email: fv('sender_email'),
     rd_reason: fv('rd_reason'), ae_name: fv('ae_name'), ae_phone: fv('ae_phone'),
     remark: fv('remark')
