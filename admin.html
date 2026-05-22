@@ -389,6 +389,29 @@ const CC    = 'nsa-team@truecorp.co.th;bo-ip-pro@ericsson.com;tanawat.thinsiriph
 function doLogout(){ sessionStorage.clear(); window.location.href = 'login.html'; }
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false}); }, 1000);
 
+// ── Date Formatter ────────────────────────────────────────────
+// แปลงทุกรูปแบบ → dd/mm/yyyy หรือ dd/mm/yyyy HH:MM
+function fmtDate(val){
+  if(!val||val==='—') return val||'—';
+  // ISO format: 2026-05-21T17:00:00.000Z หรือ 2026-05-21
+  if(/^\d{4}-\d{2}-\d{2}/.test(val)){
+    const d = new Date(val);
+    if(isNaN(d)) return val;
+    const pad = n=>String(n).padStart(2,'0');
+    const dateStr = `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+    // ถ้ามีเวลาด้วย
+    if(val.includes('T')){
+      return `${dateStr} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    return dateStr;
+  }
+  // timestamp แบบ th-TH มี timezone: "22/5/2569 02:35:23" → ตัด tz ออก
+  // รูปแบบ dd/mm/yyyy, HH:MM:SS หรือ d/m/yyyy, HH:MM:SS
+  const m = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{2}:\d{2})/);
+  if(m) return `${String(m[1]).padStart(2,'0')}/${String(m[2]).padStart(2,'0')}/${m[3]} ${m[4]}`;
+  return val;
+}
+
 // ── Data ──────────────────────────────────────────────────────
 let allRecs=[], filtered=[], curPage=1, PAGE=15, sortCol='id', sortDir='desc', curId=null;
 
@@ -457,11 +480,11 @@ function renderPage(){
     const sd=isSent?`<span class="sdot sent"><span class="dot"></span>ดำเนินการแล้ว</span>`:`<span class="sdot pend"><span class="dot"></span>รอดำเนินการ</span>`;
     return`<tr onclick="showDetail('${r.id}')" style="cursor:pointer">
       <td><span class="badge bb">${st+i+1}</span></td>
-      <td style="font-size:11px;color:var(--g500)">${r.timestamp||'—'}</td>
+      <td style="font-size:11px;color:var(--g500)">${fmtDate(r.timestamp)||'—'}</td>
       <td><span class="mono">${r.circuit||'—'}</span></td>
       <td style="font-weight:500">${r.customer||'—'}</td>
-      <td style="font-size:12px;color:var(--g600)">${r.due_date||'—'}</td>
-      <td style="font-size:12px;color:var(--t600);font-weight:500">${r.new_due_date||'—'}</td>
+      <td style="font-size:12px;color:var(--g600)">${fmtDate(r.due_date)||'—'}</td>
+      <td style="font-size:12px;color:var(--t600);font-weight:500">${fmtDate(r.new_due_date)||'—'}</td>
       <td style="font-size:12px">${(r.staff||'').split('_')[1]||r.staff||'—'}</td>
       <td>${r.sender_email?`<span class="echip" title="${r.sender_email}">✉ ${r.sender_email.length>22?r.sender_email.substring(0,20)+'…':r.sender_email}</span>`:'<span style="color:var(--g300);font-size:12px">—</span>'}</td>
       <td>${sd}</td>
@@ -498,8 +521,8 @@ function showDetail(id){
     <div class="ds"><div class="ds-title">ข้อมูล Circuit</div><div class="dg">
       <div class="di"><div class="dk">Circuit</div><div class="dv mo">${r.circuit||'—'}</div></div>
       <div class="di"><div class="dk">Customer Name</div><div class="dv">${r.customer||'—'}</div></div>
-      <div class="di"><div class="dk">Due Date (เดิม)</div><div class="dv">${r.due_date||'—'}</div></div>
-      <div class="di"><div class="dk">Change Due Date</div><div class="dv" style="color:var(--t600)">${r.new_due_date||'—'}</div></div>
+      <div class="di"><div class="dk">Due Date (เดิม)</div><div class="dv">${fmtDate(r.due_date)||'—'}</div></div>
+      <div class="di"><div class="dk">Change Due Date</div><div class="dv" style="color:var(--t600)">${fmtDate(r.new_due_date)||'—'}</div></div>
     </div></div>
     <div class="ds"><div class="ds-title">ผู้ดำเนินการ</div><div class="dg">
       <div class="di"><div class="dk">Staff Code_Name</div><div class="dv">${r.staff||'—'}</div></div>
@@ -534,8 +557,8 @@ function buildEmail(r){
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Circuit         : ${r.circuit}
   Customer Name   : ${r.customer}
-  Due Date (เดิม) : ${r.due_date}
-  Change Due Date : ${r.new_due_date}
+  Due Date (เดิม) : ${fmtDate(r.due_date)}
+  Change Due Date : ${fmtDate(r.new_due_date)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  ผู้ดำเนินการ
