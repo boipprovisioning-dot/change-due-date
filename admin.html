@@ -208,7 +208,7 @@ tr:hover td{background:var(--g50)}
       <div class="tc">
         <div class="tc-hdr"><div class="tc-title">รายการเลื่อนนัด</div><span class="tc-cnt" id="tableCnt">0 รายการ</span></div>
         <div class="tw"><table>
-          <thead><tr><th onclick="sortBy('id')">#</th><th onclick="sortBy('timestamp')">วันที่บันทึก</th><th onclick="sortBy('circuit')">Circuit</th><th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('new_due_date')">Change Date</th><th onclick="sortBy('staff')">Staff</th><th>Email ผู้ส่ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+          <thead><tr><th onclick="sortBy('id')">#</th><th onclick="sortBy('timestamp')">วันที่บันทึก</th><th onclick="sortBy('circuit')">Circuit</th><th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('due_date')">Due Date เดิม</th><th onclick="sortBy('new_due_date')">Change Due Date</th><th onclick="sortBy('staff')">Staff</th><th>Email ผู้ส่ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
           <tbody id="tableBody"><tr class="loading-row"><td colspan="9">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr></tbody>
         </table></div>
         <div class="pag"><div id="pagInfo">—</div><div class="pb" id="pagBtns"></div></div>
@@ -302,7 +302,7 @@ tr:hover td{background:var(--g50)}
 <script>
 
 // ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
-const API = 'https://script.google.com/macros/s/AKfycbwnDqgcq0T677YeI7QoLz0spjMUpV8EoIsRFKhlGxbEfyTYFvjUKnKDmuNjf0Oz24dZ/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
 
 async function GET(params) {
   const u = new URL(API);
@@ -345,6 +345,12 @@ const CC    = 'nsa-team@truecorp.co.th;bo-ip-pro@ericsson.com;tanawat.thinsiriph
 function doLogout(){ sessionStorage.clear(); window.location.href = 'login.html'; }
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false}); }, 1000);
 
+,body:JSON.stringify(body)});
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
 // ── Data ──────────────────────────────────────────────────────
 let allRecs=[], filtered=[], curPage=1, PAGE=15, sortCol='id', sortDir='desc', curId=null;
 
@@ -372,17 +378,6 @@ function popFilters(){
   const staffs=[...new Set(allRecs.map(r=>r.staff).filter(Boolean))];
   const fs=document.getElementById('aFStaff'), sv=fs.value;
   fs.innerHTML='<option value="">Staff ทั้งหมด</option>'+staffs.map(s=>`<option value="${s}"${s===sv?' selected':''}>${s}</option>`).join('');
-}
-
-// ── Timestamp formatter ──────────────────────────────────────
-function fmtTs(ts){
-  if(!ts) return '—';
-  // รองรับทั้ง ISO format และ format อื่นๆ
-  const d = new Date(ts);
-  if(isNaN(d)) return ts; // ถ้า parse ไม่ได้ให้แสดงตามเดิม
-  const date = d.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const time = d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
-  return date+' '+time;
 }
 
 // ── Table ─────────────────────────────────────────────────────
@@ -424,10 +419,11 @@ function renderPage(){
     const sd=isSent?`<span class="sdot sent"><span class="dot"></span>ดำเนินการแล้ว</span>`:`<span class="sdot pend"><span class="dot"></span>รอดำเนินการ</span>`;
     return`<tr onclick="showDetail('${r.id}')" style="cursor:pointer">
       <td><span class="badge bb">${st+i+1}</span></td>
-      <td style="font-size:11px;color:var(--g500)">${fmtTs(r.timestamp)}</td>
+      <td style="font-size:11px;color:var(--g500)">${r.timestamp||'—'}</td>
       <td><span class="mono">${r.circuit||'—'}</span></td>
       <td style="font-weight:500">${r.customer||'—'}</td>
-      <td style="font-size:12px;color:var(--t600);font-weight:500">${r.new_due_date||'—'}</td>
+      <td style="font-size:12px;color:var(--g500)">${fmtDate(r.due_date)}</td>
+      <td style="font-size:12px;color:var(--t600);font-weight:500">${fmtDate(r.new_due_date)}</td>
       <td style="font-size:12px">${(r.staff||'').split('_')[1]||r.staff||'—'}</td>
       <td>${r.sender_email?`<span class="echip" title="${r.sender_email}">✉ ${r.sender_email.length>22?r.sender_email.substring(0,20)+'…':r.sender_email}</span>`:'<span style="color:var(--g300);font-size:12px">—</span>'}</td>
       <td>${sd}</td>
@@ -463,8 +459,8 @@ function showDetail(id){
     <div class="ds"><div class="ds-title">ข้อมูล Circuit</div><div class="dg">
       <div class="di"><div class="dk">Circuit</div><div class="dv mo">${r.circuit||'—'}</div></div>
       <div class="di"><div class="dk">Customer Name</div><div class="dv">${r.customer||'—'}</div></div>
-      <div class="di"><div class="dk">Due Date (เดิม)</div><div class="dv">${r.due_date||'—'}</div></div>
-      <div class="di"><div class="dk">Change Due Date</div><div class="dv" style="color:var(--t600)">${r.new_due_date||'—'}</div></div>
+      <div class="di"><div class="dk">Due Date (เดิม)</div><div class="dv">${fmtDate(r.due_date)}</div></div>
+      <div class="di"><div class="dk">Change Due Date</div><div class="dv" style="color:var(--t600)">${fmtDate(r.new_due_date)}</div></div>
     </div></div>
     <div class="ds"><div class="ds-title">ผู้ดำเนินการ</div><div class="dg">
       <div class="di"><div class="dk">Staff Code_Name</div><div class="dv">${r.staff||'—'}</div></div>
@@ -498,8 +494,8 @@ function buildEmail(r){
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Circuit         : ${r.circuit}
   Customer Name   : ${r.customer}
-  Due Date (เดิม) : ${r.due_date}
-  Change Due Date : ${r.new_due_date}
+  Due Date (เดิม) : ${fmtDate(r.due_date)}
+  Change Due Date : ${fmtDate(r.new_due_date)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  ผู้ดำเนินการ
@@ -548,11 +544,7 @@ function quickEmail(id){
 async function sendEmail(){
   const r=allRecs.find(x=>String(x.id)===String(curId)); if(!r) return;
   const{subj,body,to}=buildEmail(r);
-  const mailUrl=`mailto:${to}?cc=${encodeURIComponent(CC)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
-  // เปิด mail client โดยไม่ navigate ออกจากหน้า
-  const a=document.createElement('a');
-  a.href=mailUrl; a.target='_blank'; a.rel='noopener';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  window.location.href=`mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(CC)}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
   document.getElementById('ovEmail').classList.remove('show');
   try{
     await POST({action:'updateEmailStatus', id: curId, emailSentAt: new Date().toISOString()});
@@ -720,6 +712,38 @@ function aTab(tab){
   document.querySelectorAll('.ni').forEach((el,i)=>el.classList.toggle('on',i===['records','stats','users'].indexOf(tab)));
   document.getElementById('pageTitle').textContent={records:'รายการเลื่อนนัดทั้งหมด',stats:'สถิติสรุป',users:'จัดการผู้ใช้งาน'}[tab]||'';
   if(tab==='users') renderUsers();
+}
+
+// ── Date Formatting ───────────────────────────────────────────
+function fmtDate(val) {
+  if (!val) return '—';
+  // ISO format: 2026-05-28T17:00:00.000Z or 2026-05-28
+  const s = String(val).trim();
+  // Try parsing as date
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    // Format as DD/MM/YYYY using Thai locale but in Buddhist era? No — use Gregorian
+    const day   = String(d.getUTCDate()).padStart(2,'0');
+    const month = String(d.getUTCMonth()+1).padStart(2,'0');
+    const year  = d.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  }
+  return s;
+}
+
+function fmtDateTime(val) {
+  if (!val) return '—';
+  const s = String(val).trim();
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const day   = String(d.getDate()).padStart(2,'0');
+    const month = String(d.getMonth()+1).padStart(2,'0');
+    const year  = d.getFullYear();
+    const hh    = String(d.getHours()).padStart(2,'0');
+    const mm    = String(d.getMinutes()).padStart(2,'0');
+    return `${day}/${month}/${year} ${hh}:${mm}`;
+  }
+  return s;
 }
 
 // ── Helpers ───────────────────────────────────────────────────
