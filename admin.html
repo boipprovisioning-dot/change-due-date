@@ -6,6 +6,7 @@
 <title>Admin Dashboard — ระบบเลื่อนนัด</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--b50:#E6F1FB;--b100:#B5D4F4;--b400:#378ADD;--b600:#185FA5;--b800:#0C447C;--b900:#042C53;--c50:#FAECE7;--c100:#F5C4B3;--c400:#D85A30;--c600:#993C1D;--t50:#E1F5EE;--t100:#9FE1CB;--t400:#1D9E75;--t600:#0F6E56;--a50:#FAEEDA;--a100:#FAC775;--a400:#EF9F27;--a600:#854F0B;--p50:#F0EDFB;--p100:#C9BFF0;--p400:#7C5CBF;--p600:#5438A0;--g50:#F7F6F2;--g100:#EEEDE8;--g200:#D8D7D0;--g300:#C4C3BB;--g500:#888780;--g600:#5F5E5A;--g700:#4A4A47;--g900:#1C1C1A}
@@ -147,6 +148,17 @@ tr:hover td{background:var(--g50)}
 .toast.err .tdot{background:var(--c400)}.toast.inf .tdot{background:var(--p400)}
 /* Loading spinner overlay */
 .loading-row td{text-align:center;padding:2rem;color:var(--g500)}
+/* Chart container */
+.chart-wrap{background:#fff;border:1px solid var(--g200);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem}
+.chart-wrap canvas{max-height:320px}
+.chart-title{font-size:14px;font-weight:600;color:var(--g900);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:768px){.chart-grid{grid-template-columns:1fr}}
+/* Viewer badge */
+.viewer-badge{background:var(--a50);color:var(--a600);border:1px solid var(--a100);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase}
+.viewer-lock{opacity:.45;cursor:not-allowed!important;pointer-events:none}
+.viewer-notice{background:var(--a50);border:1px solid var(--a100);border-radius:10px;padding:9px 14px;font-size:12px;color:var(--a600);display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+.viewer-notice svg{width:14px;height:14px;stroke:var(--a600);fill:none;stroke-width:2;flex-shrink:0}
 @media(max-width:768px){.layout{flex-direction:column}.sidebar{width:100%;height:auto;position:relative}.sg{grid-template-columns:1fr 1fr}.content{padding:1rem}.dg{grid-template-columns:1fr}}
 </style>
 </head>
@@ -164,7 +176,7 @@ tr:hover td{background:var(--g50)}
 <div class="layout">
   <div class="sidebar">
     <div class="sb-logo"><div><span class="sb-dot"></span><span class="sb-name">Admin Panel</span></div><div class="sb-sub">ระบบเลื่อนนัดติดตั้ง</div></div>
-    <div class="sb-user"><strong id="sbUname">—</strong>ผู้ดูแลระบบ</div>
+    <div class="sb-user"><strong id="sbUname">—</strong><span id="sbRole">ผู้ดูแลระบบ</span></div>
     <nav class="sb-nav">
       <div class="nav-sec">ข้อมูล</div>
       <div class="ni on" id="ni0" onclick="aTab('records')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>รายการทั้งหมด</div>
@@ -173,7 +185,7 @@ tr:hover td{background:var(--g50)}
       <div class="ni" id="ni2" onclick="aTab('users')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>จัดการ User<span class="ni-badge" id="pendNb" style="display:none">0</span></div>
       <div class="nav-sec">เครื่องมือ</div>
       <div class="ni" onclick="exportExcel()"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>ส่งออก Excel</div>
-      <div class="ni" onclick="confClearAll()" style="color:rgba(216,90,48,.75)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>ล้างข้อมูลทั้งหมด</div>
+      <div class="ni" onclick="confClearAll()" id="niClearAll" style="color:rgba(216,90,48,.75)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>ล้างข้อมูลทั้งหมด</div>
     </nav>
     <div class="sb-bot">
       <button class="sb-link" onclick="window.location.href='reschedule_form.html'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>กลับหน้าฟอร์ม</button>
@@ -193,6 +205,7 @@ tr:hover td{background:var(--g50)}
 
     <!-- Records -->
     <div id="tabRecords" class="content">
+      <div id="viewerNoticeRecords" style="display:none" class="viewer-notice"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></svg>คุณมีสิทธิ์ <strong>Viewer</strong> — ดูและ Export ข้อมูลได้เท่านั้น ไม่สามารถแก้ไข/ลบ/ส่ง Email ได้</div>
       <div class="sg">
         <div class="sc bl"><div class="sc-acc"></div><div class="sc-label">รายการทั้งหมด</div><div class="sc-val" id="stTotal">—</div><div class="sc-sub">รายการใน Sheets</div></div>
         <div class="sc tl"><div class="sc-acc"></div><div class="sc-label">วันนี้</div><div class="sc-val" id="stToday">—</div><div class="sc-sub">บันทึกวันนี้</div></div>
@@ -208,8 +221,8 @@ tr:hover td{background:var(--g50)}
       <div class="tc">
         <div class="tc-hdr"><div class="tc-title">รายการเลื่อนนัด</div><span class="tc-cnt" id="tableCnt">0 รายการ</span></div>
         <div class="tw"><table>
-          <thead><tr><th onclick="sortBy('id')">#</th><th onclick="sortBy('timestamp')">วันที่บันทึก</th><th onclick="sortBy('circuit')">Circuit</th><th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('due_date')">Due Date เดิม</th><th onclick="sortBy('new_due_date')">Change Due Date</th><th onclick="sortBy('staff')">Staff</th><th>Email ผู้ส่ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-          <tbody id="tableBody"><tr class="loading-row"><td colspan="10">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr></tbody>
+          <thead><tr><th onclick="sortBy('id')">#</th><th onclick="sortBy('timestamp')">วันที่บันทึก</th><th onclick="sortBy('circuit')">Circuit</th><th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('new_due_date')">Change Date</th><th onclick="sortBy('staff')">Staff</th><th>Email ผู้ส่ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+          <tbody id="tableBody"><tr class="loading-row"><td colspan="9">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr></tbody>
         </table></div>
         <div class="pag"><div id="pagInfo">—</div><div class="pb" id="pagBtns"></div></div>
       </div>
@@ -217,6 +230,24 @@ tr:hover td{background:var(--g50)}
 
     <!-- Stats -->
     <div id="tabStats" class="content" style="display:none">
+      <div class="chart-wrap" style="margin-bottom:1rem">
+        <div class="chart-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          จำนวนการเลื่อนนัดรายเดือน
+          <select id="chartYearSel" class="fsel" style="margin-left:auto;min-width:90px" onchange="renderCharts()"><option value="">ทุกปี</option></select>
+        </div>
+        <canvas id="chartMonthly"></canvas>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-wrap">
+          <div class="chart-title"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>สัดส่วนตาม Staff</div>
+          <canvas id="chartStaff"></canvas>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>สัดส่วนตามเหตุผล (Top 7)</div>
+          <canvas id="chartReason"></canvas>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
         <div class="tc"><div class="tc-hdr"><div class="tc-title">สรุปตาม Staff</div></div><div class="tw"><table><thead><tr><th>Staff</th><th>จำนวน</th></tr></thead><tbody id="stStaff"><tr class="loading-row"><td colspan="2">⏳ กำลังโหลด...</td></tr></tbody></table></div></div>
         <div class="tc"><div class="tc-hdr"><div class="tc-title">สรุปตามเหตุผล</div></div><div class="tw"><table><thead><tr><th>RD Reason</th><th>จำนวน</th></tr></thead><tbody id="stReason"><tr class="loading-row"><td colspan="2">⏳ กำลังโหลด...</td></tr></tbody></table></div></div>
@@ -273,7 +304,7 @@ tr:hover td{background:var(--g50)}
     <div class="fg"><label>Username <span style="color:var(--c400)">*</span></label><input class="fi" type="text" id="auUser" placeholder="ภาษาอังกฤษ/ตัวเลข ไม่มีช่องว่าง"></div>
     <div class="fg"><label>Password <span style="color:var(--c400)">*</span></label><input class="fi" type="password" id="auPw" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
     <div class="fg"><label>Email</label><input class="fi" type="text" id="auEmail" placeholder="อีเมล (ถ้ามี)"></div>
-    <div class="fg"><label>Role <span style="color:var(--c400)">*</span></label><select class="fi fi-sel" id="auRole"><option value="user">เจ้าหน้าที่ (User)</option><option value="admin">Admin</option></select></div>
+    <div class="fg"><label>Role <span style="color:var(--c400)">*</span></label><select class="fi fi-sel" id="auRole"><option value="user">เจ้าหน้าที่ (User)</option><option value="viewer">Viewer (ดูข้อมูล)</option><option value="admin">Admin</option></select></div>
   </div>
   <div class="mf"><button class="btn-sm" onclick="document.getElementById('ovAddUser').classList.remove('show')">ยกเลิก</button><button class="btn-sm btn-suc" id="addUBtn" onclick="submitAddUser()">เพิ่มผู้ใช้</button></div></div>
 </div>
@@ -286,7 +317,7 @@ tr:hover td{background:var(--g50)}
     <div class="fg"><label>ชื่อ-นามสกุล</label><input class="fi" type="text" id="euFull"></div>
     <div class="fg"><label>Password ใหม่ (เว้นว่างหากไม่เปลี่ยน)</label><input class="fi" type="password" id="euPw" placeholder="ใส่เพื่อเปลี่ยน Password"></div>
     <div class="fg"><label>Email</label><input class="fi" type="text" id="euEmail"></div>
-    <div class="fg"><label>Role</label><select class="fi fi-sel" id="euRole"><option value="user">เจ้าหน้าที่ (User)</option><option value="admin">Admin</option></select></div>
+    <div class="fg"><label>Role</label><select class="fi fi-sel" id="euRole"><option value="user">เจ้าหน้าที่ (User)</option><option value="viewer">Viewer (ดูข้อมูล)</option><option value="admin">Admin</option></select></div>
     <input type="hidden" id="euHidden">
   </div>
   <div class="mf"><button class="btn-sm" onclick="document.getElementById('ovEditUser').classList.remove('show')">ยกเลิก</button><button class="btn-sm btn-pri" id="editUBtn" onclick="submitEditUser()">บันทึก</button></div></div>
@@ -302,24 +333,15 @@ tr:hover td{background:var(--g50)}
 <script>
 
 // ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
-const API = 'https://script.google.com/macros/s/AKfycbwoRqv68LNhmbLQY2spiwwBWOpMWgJnyshIN_diU0CV5vRIRzhHq0DZv1GRHyAjTf6K/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
 
 async function GET(params) {
   const u = new URL(API);
   Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(u.toString(), {signal: controller.signal});
-    clearTimeout(timer);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-    return j.data;
-  } catch(e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('หมดเวลา (timeout) — กรุณาตรวจสอบ Apps Script URL');
-    throw e;
-  }
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
 }
 
 async function POST(body) {
@@ -329,19 +351,10 @@ async function POST(body) {
   const u = new URL(API);
   u.searchParams.set('action', action);
   u.searchParams.set('payload', payload);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(u.toString(), {signal: controller.signal});
-    clearTimeout(timer);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-    return j.data;
-  } catch(e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('หมดเวลา (timeout) — กรุณาตรวจสอบ Apps Script URL');
-    throw e;
-  }
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -350,37 +363,50 @@ async function POST(body) {
 
 const UNAME = sessionStorage.getItem('rsch_username') || '';
 const FNAME = sessionStorage.getItem('rsch_fullname') || '';
+const ROLE  = sessionStorage.getItem('rsch_role')     || '';
+const IS_VIEWER = ROLE === 'viewer';
 const CC    = 'nsa-team@truecorp.co.th;bo-ip-pro@ericsson.com;tanawat.thinsiriphat@ericsson.com';
 
 (function checkAuth(){
-  const isAdmin = sessionStorage.getItem('rsch_admin') === 'true';
-  const role    = sessionStorage.getItem('rsch_role') || '';
-  if(!isAdmin && role !== 'admin'){
+  // viewer ก็เข้า admin ได้
+  if(sessionStorage.getItem('rsch_admin') !== 'true' && ROLE !== 'viewer'){
     document.getElementById('authBlock').classList.add('show'); return;
   }
-  // ถ้า rsch_admin ไม่ได้ set แต่ role=admin ก็ยังให้ผ่าน
-  document.getElementById('sbUname').textContent = FNAME || UNAME || 'Admin';
+  document.getElementById('sbUname').textContent = FNAME || UNAME;
+  if(IS_VIEWER){
+    document.getElementById('sbRole').innerHTML = '<span class="viewer-badge">Viewer</span>';
+    document.getElementById('viewerNoticeRecords').style.display = 'flex';
+    // ซ่อนเมนูที่ viewer ไม่มีสิทธิ์
+    document.getElementById('ni2').style.display = 'none';
+    document.getElementById('niClearAll').style.display = 'none';
+    // ซ่อนปุ่ม Export ใน topbar สำหรับ viewer (ยังคงใช้ sidebar export ได้)
+  } else {
+    document.getElementById('sbRole').textContent = 'ผู้ดูแลระบบ';
+  }
   loadData();
 })();
 
 function doLogout(){ sessionStorage.clear(); window.location.href = 'login.html'; }
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false}); }, 1000);
 
+,body:JSON.stringify(body)});
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
+  return j.data;
+}
+
 // ── Data ──────────────────────────────────────────────────────
 let allRecs=[], filtered=[], curPage=1, PAGE=15, sortCol='id', sortDir='desc', curId=null;
 
 async function loadData(){
-  document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="10">⏳ กำลังโหลดข้อมูลจาก Google Sheets...</td></tr>`;
   try{
     allRecs = await GET({action:'getRecords'});
     allRecs = (allRecs||[]).map(r=>({...r, id: r.id||Date.now()}));
     updateStats(); popFilters(); renderTable(); renderStats();
     if(document.getElementById('tabUsers').style.display !== 'none') renderUsers();
   }catch(err){
-    const msg = err.message || String(err);
-    toast('โหลดข้อมูลไม่สำเร็จ: '+msg,'err');
-    document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="10">❌ โหลดข้อมูลไม่สำเร็จ: ${msg} — <a href="#" onclick="loadData()">ลองอีกครั้ง</a></td></tr>`;
-    document.getElementById('stTotal').textContent='ERR';
+    toast('โหลดข้อมูลไม่สำเร็จ: '+err.message,'err');
+    document.getElementById('tableBody').innerHTML=`<tr class="loading-row"><td colspan="9">❌ โหลดข้อมูลไม่สำเร็จ — <a href="#" onclick="loadData()">ลองอีกครั้ง</a></td></tr>`;
   }
 }
 
@@ -431,7 +457,7 @@ function renderPage(){
   document.getElementById('pagInfo').textContent = filtered.length?`แสดง ${st+1}–${en} จาก ${filtered.length}`:'ไม่พบข้อมูล';
   const rb=r=>{const n=parseInt((r||'').split('_')[0]);if(n>=6500&&n<6700)return'bb';if(n>=6800&&n<7000)return'bt';if(n>=8800&&n<9200)return'ba';return'bc2';};
   const tbody=document.getElementById('tableBody');
-  if(!page.length){ tbody.innerHTML=`<tr class="loading-row"><td colspan="10">📋 ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`; document.getElementById('pagBtns').innerHTML=''; return; }
+  if(!page.length){ tbody.innerHTML=`<tr class="loading-row"><td colspan="9">📋 ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`; document.getElementById('pagBtns').innerHTML=''; return; }
   tbody.innerHTML=page.map((r,i)=>{
     const isSent=r.emailStatus==='sent';
     const sd=isSent?`<span class="sdot sent"><span class="dot"></span>ดำเนินการแล้ว</span>`:`<span class="sdot pend"><span class="dot"></span>รอดำเนินการ</span>`;
@@ -440,14 +466,14 @@ function renderPage(){
       <td style="font-size:11px;color:var(--g500)">${r.timestamp||'—'}</td>
       <td><span class="mono">${r.circuit||'—'}</span></td>
       <td style="font-weight:500">${r.customer||'—'}</td>
-      <td style="font-size:12px;color:var(--g500)">${fmtDate(r.due_date)}</td>
-      <td style="font-size:12px;color:var(--t600);font-weight:500">${fmtDate(r.new_due_date)}</td>
+      <td style="font-size:12px;color:var(--t600);font-weight:500">${r.new_due_date||'—'}</td>
       <td style="font-size:12px">${(r.staff||'').split('_')[1]||r.staff||'—'}</td>
       <td>${r.sender_email?`<span class="echip" title="${r.sender_email}">✉ ${r.sender_email.length>22?r.sender_email.substring(0,20)+'…':r.sender_email}</span>`:'<span style="color:var(--g300);font-size:12px">—</span>'}</td>
       <td>${sd}</td>
       <td onclick="event.stopPropagation()"><div class="ag">
-        ${r.sender_email?`<button class="btn-sm btn-mai" style="padding:4px 8px;font-size:11px" onclick="quickEmail('${r.id}')">✉ ส่งเมล</button>`:''}
-        <button class="btn-sm btn-dan" style="padding:4px 8px;font-size:11px" onclick="delRec('${r.id}')">ลบ</button>
+        ${(!IS_VIEWER && r.sender_email)?`<button class="btn-sm btn-mai" style="padding:4px 8px;font-size:11px" onclick="quickEmail('${r.id}')">✉ ส่งเมล</button>`:''}
+        ${!IS_VIEWER?`<button class="btn-sm btn-dan" style="padding:4px 8px;font-size:11px" onclick="delRec('${r.id}')">ลบ</button>`:''}
+        ${IS_VIEWER?`<span style="font-size:11px;color:var(--g500)">—</span>`:''}
       </div></td>
     </tr>`;
   }).join('');
@@ -477,8 +503,8 @@ function showDetail(id){
     <div class="ds"><div class="ds-title">ข้อมูล Circuit</div><div class="dg">
       <div class="di"><div class="dk">Circuit</div><div class="dv mo">${r.circuit||'—'}</div></div>
       <div class="di"><div class="dk">Customer Name</div><div class="dv">${r.customer||'—'}</div></div>
-      <div class="di"><div class="dk">Due Date (เดิม)</div><div class="dv">${fmtDate(r.due_date)}</div></div>
-      <div class="di"><div class="dk">Change Due Date</div><div class="dv" style="color:var(--t600)">${fmtDate(r.new_due_date)}</div></div>
+      <div class="di"><div class="dk">Due Date (เดิม)</div><div class="dv">${r.due_date||'—'}</div></div>
+      <div class="di"><div class="dk">Change Due Date</div><div class="dv" style="color:var(--t600)">${r.new_due_date||'—'}</div></div>
     </div></div>
     <div class="ds"><div class="ds-title">ผู้ดำเนินการ</div><div class="dg">
       <div class="di"><div class="dk">Staff Code_Name</div><div class="dv">${r.staff||'—'}</div></div>
@@ -495,7 +521,8 @@ function showDetail(id){
       <div class="di"><div class="dk">เบอร์ PM/AE</div><div class="dv mo">${r.ae_phone||'—'}</div></div>
     </div></div>
     <div class="ds" style="margin-bottom:0"><div class="ds-title">สถานะ</div><div style="margin-top:.5rem">${sh}</div></div>`;
-  document.getElementById('detEmailBtn').style.display=r.sender_email?'':'none';
+  document.getElementById('detEmailBtn').style.display=(!IS_VIEWER && r.sender_email)?'':'none';
+  document.getElementById('detDelBtn').style.display=IS_VIEWER?'none':'';
   document.getElementById('detDelBtn').onclick=()=>{ document.getElementById('ovDetail').classList.remove('show'); delRec(id); };
   document.getElementById('ovDetail').classList.add('show');
 }
@@ -512,8 +539,8 @@ function buildEmail(r){
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Circuit         : ${r.circuit}
   Customer Name   : ${r.customer}
-  Due Date (เดิม) : ${fmtDate(r.due_date)}
-  Change Due Date : ${fmtDate(r.new_due_date)}
+  Due Date (เดิม) : ${r.due_date}
+  Change Due Date : ${r.new_due_date}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  ผู้ดำเนินการ
@@ -597,13 +624,106 @@ function confClearAll(){
   document.getElementById('ovConfirm').classList.add('show');
 }
 
-// ── Stats ─────────────────────────────────────────────────────
+// ── Stats & Charts ────────────────────────────────────────────
+let chartMonthly=null, chartStaff=null, chartReason=null;
+
 function renderStats(){
   const sc={},rc={};
   allRecs.forEach(r=>{sc[r.staff||'—']=(sc[r.staff||'—']||0)+1; rc[r.rd_reason||'—']=(rc[r.rd_reason||'—']||0)+1;});
   const mk=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td title="${k}">${k.length>36?k.substring(0,34)+'…':k}</td><td><span class="badge bb">${v}</span></td></tr>`).join('')||'<tr class="loading-row"><td colspan="2">ไม่มีข้อมูล</td></tr>';
   document.getElementById('stStaff').innerHTML=mk(sc);
   document.getElementById('stReason').innerHTML=mk(rc);
+
+  // Populate year selector
+  const years=[...new Set(allRecs.map(r=>{
+    if(!r.timestamp) return null;
+    const y=r.timestamp.match(/\d{4}/); return y?y[0]:null;
+  }).filter(Boolean))].sort((a,b)=>b-a);
+  const ys=document.getElementById('chartYearSel');
+  const curY=ys.value;
+  ys.innerHTML='<option value="">ทุกปี</option>'+years.map(y=>`<option value="${y}"${y===curY?' selected':''}>${y}</option>`).join('');
+
+  renderCharts();
+}
+
+function renderCharts(){
+  const selYear=document.getElementById('chartYearSel').value;
+  const recs=selYear?allRecs.filter(r=>r.timestamp&&r.timestamp.includes(selYear)):allRecs;
+
+  // Monthly bar chart — parse timestamps
+  const monthMap={};
+  const THAI_MONTHS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  recs.forEach(r=>{
+    if(!r.timestamp) return;
+    // timestamp format: d/m/yyyy, hh:mm:ss (th-TH locale)
+    const parts=r.timestamp.split(',')[0].trim().split('/');
+    if(parts.length<3) return;
+    const m=parseInt(parts[1])-1; // 0-indexed
+    const y=parts[2];
+    const key=`${y}-${String(m+1).padStart(2,'0')}`;
+    monthMap[key]=(monthMap[key]||0)+1;
+  });
+  const sortedKeys=Object.keys(monthMap).sort();
+  const monthLabels=sortedKeys.map(k=>{ const[y,m]=k.split('-'); return `${THAI_MONTHS[parseInt(m)-1]} ${parseInt(y)-543}`; });
+  const monthData=sortedKeys.map(k=>monthMap[k]);
+
+  const mCtx=document.getElementById('chartMonthly').getContext('2d');
+  if(chartMonthly) chartMonthly.destroy();
+  chartMonthly=new Chart(mCtx,{
+    type:'bar',
+    data:{
+      labels:monthLabels.length?monthLabels:['ยังไม่มีข้อมูล'],
+      datasets:[{
+        label:'จำนวนการเลื่อนนัด',
+        data:monthData.length?monthData:[0],
+        backgroundColor:'rgba(55,138,221,0.75)',
+        borderColor:'rgba(24,95,165,1)',
+        borderWidth:1.5,
+        borderRadius:6,
+        borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y} รายการ`}}},
+      scales:{y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}
+    }
+  });
+
+  // Staff donut chart
+  const sc={};
+  recs.forEach(r=>{ const n=(r.staff||'—').split('_')[1]||(r.staff||'—'); sc[n]=(sc[n]||0)+1; });
+  const staffEntries=Object.entries(sc).sort((a,b)=>b[1]-a[1]);
+  const COLORS=['#378ADD','#1D9E75','#EF9F27','#D85A30','#7C5CBF','#0C447C','#0F6E56','#854F0B','#993C1D','#5438A0'];
+  const sCtx=document.getElementById('chartStaff').getContext('2d');
+  if(chartStaff) chartStaff.destroy();
+  chartStaff=new Chart(sCtx,{
+    type:'doughnut',
+    data:{
+      labels:staffEntries.map(([k])=>k),
+      datasets:[{data:staffEntries.map(([,v])=>v),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}}}}
+  });
+
+  // Reason bar chart (top 7)
+  const rc={};
+  recs.forEach(r=>{ const code=(r.rd_reason||'—').split('_')[0]; const label=`[${code}]`; rc[label]=(rc[label]||0)+1; });
+  const reasonEntries=Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const rCtx=document.getElementById('chartReason').getContext('2d');
+  if(chartReason) chartReason.destroy();
+  chartReason=new Chart(rCtx,{
+    type:'bar',
+    data:{
+      labels:reasonEntries.map(([k])=>k),
+      datasets:[{label:'จำนวน',data:reasonEntries.map(([,v])=>v),backgroundColor:COLORS.slice(0,reasonEntries.length),borderRadius:6,borderSkipped:false,borderWidth:0}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{x:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}}
+    }
+  });
 }
 
 // ── User Management ───────────────────────────────────────────
@@ -618,7 +738,7 @@ async function renderUsers(){
     else{ pt.innerHTML=pend.map(p=>`<tr>
       <td style="font-weight:500">${p.fullname||'—'}</td>
       <td><span class="mono">${p.username}</span></td>
-      <td><span class="badge ${p.role==='admin'?'bp':'bb'}">${p.role==='admin'?'Admin':'User'}</span></td>
+      <td><span class="badge ${p.role==='admin'?'bp':p.role==='viewer'?'ba':'bb'}">${p.role==='admin'?'Admin':p.role==='viewer'?'Viewer':'User'}</span></td>
       <td style="font-size:12px;color:var(--g500)">${p.email||'—'}</td>
       <td style="font-size:11px;color:var(--g500)">${p.requestedAt?new Date(p.requestedAt).toLocaleDateString('th-TH'):new Date(Number(p.id)).toLocaleDateString('th-TH')}</td>
       <td><div class="ag">
@@ -632,7 +752,7 @@ async function renderUsers(){
     else{ at.innerHTML=users.map(u=>{const isSA=u.username==='VDES2740';return`<tr>
       <td style="font-weight:500">${u.fullname||u.username}</td>
       <td><span class="mono">${u.username}</span>${isSA?' ⭐':''}</td>
-      <td><span class="badge ${u.role==='admin'?'bp':'bb'}">${u.role==='admin'?'Admin':'User'}</span></td>
+      <td><span class="badge ${u.role==='admin'?'bp':u.role==='viewer'?'ba':'bb'}">${u.role==='admin'?'Admin':u.role==='viewer'?'Viewer':'User'}</span></td>
       <td style="font-size:12px;color:var(--g500)">${u.email||'—'}</td>
       <td style="font-size:11px;color:var(--g500)">${u.createdAt?new Date(u.createdAt).toLocaleDateString('th-TH'):'—'}</td>
       <td><div class="ag">
@@ -726,42 +846,12 @@ function exportExcel(){
 
 // ── Tabs ──────────────────────────────────────────────────────
 function aTab(tab){
+  if(tab==='users' && IS_VIEWER){ toast('คุณไม่มีสิทธิ์เข้าหน้าจัดการ User','err'); return; }
   ['tabRecords','tabStats','tabUsers'].forEach((id,i)=>document.getElementById(id).style.display=(['records','stats','users'][i]===tab?'':'none'));
   document.querySelectorAll('.ni').forEach((el,i)=>el.classList.toggle('on',i===['records','stats','users'].indexOf(tab)));
   document.getElementById('pageTitle').textContent={records:'รายการเลื่อนนัดทั้งหมด',stats:'สถิติสรุป',users:'จัดการผู้ใช้งาน'}[tab]||'';
   if(tab==='users') renderUsers();
-}
-
-// ── Date Formatting ───────────────────────────────────────────
-function fmtDate(val) {
-  if (!val) return '—';
-  // ISO format: 2026-05-28T17:00:00.000Z or 2026-05-28
-  const s = String(val).trim();
-  // Try parsing as date
-  const d = new Date(s);
-  if (!isNaN(d.getTime())) {
-    // Format as DD/MM/YYYY using Thai locale but in Buddhist era? No — use Gregorian
-    const day   = String(d.getUTCDate()).padStart(2,'0');
-    const month = String(d.getUTCMonth()+1).padStart(2,'0');
-    const year  = d.getUTCFullYear();
-    return `${day}/${month}/${year}`;
-  }
-  return s;
-}
-
-function fmtDateTime(val) {
-  if (!val) return '—';
-  const s = String(val).trim();
-  const d = new Date(s);
-  if (!isNaN(d.getTime())) {
-    const day   = String(d.getDate()).padStart(2,'0');
-    const month = String(d.getMonth()+1).padStart(2,'0');
-    const year  = d.getFullYear();
-    const hh    = String(d.getHours()).padStart(2,'0');
-    const mm    = String(d.getMinutes()).padStart(2,'0');
-    return `${day}/${month}/${year} ${hh}:${mm}`;
-  }
-  return s;
+  if(tab==='stats') renderCharts();
 }
 
 // ── Helpers ───────────────────────────────────────────────────

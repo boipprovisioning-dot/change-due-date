@@ -146,6 +146,7 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
       <div class="role-row">
         <div class="role-opt sel" id="roleUser" onclick="selRole('user')"><div class="ro-icon">👤</div><div class="ro-label">เจ้าหน้าที่</div><div class="ro-sub">กรอกฟอร์มเลื่อนนัด</div></div>
         <div class="role-opt" id="roleAdmin" onclick="selRole('admin')"><div class="ro-icon">🛡️</div><div class="ro-label">Admin</div><div class="ro-sub">จัดการข้อมูลทั้งหมด</div></div>
+        <div class="role-opt" id="roleViewer" onclick="selRole('viewer')" style="grid-column:1/-1"><div class="ro-icon">👁️</div><div class="ro-label">Viewer</div><div class="ro-sub">ดูและ Export ข้อมูลได้ ไม่สามารถแก้ไขได้</div></div>
       </div>
       <div class="mfg"><label>ชื่อ-นามสกุล <span style="color:var(--c400)">*</span></label><input class="plain" type="text" id="rFull" placeholder="ชื่อ-นามสกุล"></div>
       <div class="mfg"><label>Username <span style="color:var(--c400)">*</span></label><input class="plain" type="text" id="rUser" placeholder="ภาษาอังกฤษ/ตัวเลข ไม่มีช่องว่าง"></div>
@@ -161,45 +162,28 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
 <script>
 
 // ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
-const API = 'https://script.google.com/macros/s/AKfycbwoRqv68LNhmbLQY2spiwwBWOpMWgJnyshIN_diU0CV5vRIRzhHq0DZv1GRHyAjTf6K/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
 
 async function GET(params) {
   const u = new URL(API);
   Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(u.toString(), {signal: controller.signal});
-    clearTimeout(timer);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-    return j.data;
-  } catch(e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
-    throw e;
-  }
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
 }
 
 async function POST(body) {
+  // ส่งเป็น GET+payload เพื่อหลีกเลี่ยง CORS
   const action = body.action;
   const payload = encodeURIComponent(JSON.stringify(body));
   const u = new URL(API);
   u.searchParams.set('action', action);
   u.searchParams.set('payload', payload);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(u.toString(), {signal: controller.signal});
-    clearTimeout(timer);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-    return j.data;
-  } catch(e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
-    throw e;
-  }
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -215,7 +199,11 @@ async function POST(body) {
 
 
 
-
+,body:JSON.stringify(body)});
+  const j=await r.json();
+  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
+  return j.data;
+}
 
 function tpw(id,eid){
   const el=document.getElementById(id),ic=document.getElementById(eid);
@@ -240,8 +228,15 @@ async function doLogin(){
     sessionStorage.setItem('rsch_username',user.username);
     sessionStorage.setItem('rsch_fullname',user.fullname||user.username);
     sessionStorage.setItem('rsch_role',user.role);
-    if(user.role==='admin'){sessionStorage.setItem('rsch_admin','true');window.location.href='admin.html';}
-    else window.location.href='reschedule_form.html';
+    if(user.role==='admin'){
+      sessionStorage.setItem('rsch_admin','true');
+      window.location.href='admin.html';
+    } else if(user.role==='viewer'){
+      // viewer เข้า admin ได้ แต่ไม่ set rsch_admin=true (ตรวจ role แยก)
+      window.location.href='admin.html';
+    } else {
+      window.location.href='reschedule_form.html';
+    }
   }catch(err){
     setLoad(false);
     if(err.message==='PENDING') document.getElementById('pendingAlert').classList.add('show');
@@ -252,7 +247,12 @@ async function doLogin(){
 let regRole='user';
 function openReg(){['regOk','regErr'].forEach(id=>document.getElementById(id).classList.remove('show'));['rFull','rUser','rPw','rEmail'].forEach(id=>document.getElementById(id).value='');selRole('user');document.getElementById('regOv').classList.add('show');}
 function closeReg(){document.getElementById('regOv').classList.remove('show');}
-function selRole(r){regRole=r;document.getElementById('roleUser').classList.toggle('sel',r==='user');document.getElementById('roleAdmin').classList.toggle('sel',r==='admin');}
+function selRole(r){
+  regRole=r;
+  document.getElementById('roleUser').classList.toggle('sel',r==='user');
+  document.getElementById('roleAdmin').classList.toggle('sel',r==='admin');
+  document.getElementById('roleViewer').classList.toggle('sel',r==='viewer');
+}
 async function submitReg(){
   document.getElementById('regOk').classList.remove('show');document.getElementById('regErr').classList.remove('show');
   const full=document.getElementById('rFull').value.trim(),user=document.getElementById('rUser').value.trim(),pw=document.getElementById('rPw').value,email=document.getElementById('rEmail').value.trim();

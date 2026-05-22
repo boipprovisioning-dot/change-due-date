@@ -229,45 +229,28 @@ footer{text-align:center;padding:1.5rem;font-size:12px;color:var(--g500);border-
 <script>
 
 // ── API helpers (GET only — หลีกเลี่ยง CORS preflight) ──────
-const API = 'https://script.google.com/macros/s/AKfycbwoRqv68LNhmbLQY2spiwwBWOpMWgJnyshIN_diU0CV5vRIRzhHq0DZv1GRHyAjTf6K/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyM4_aDVVCtfbc36GTb6Mbk2fE-L5Jp7UEQ0Bxcgt08uybbxt84ZxGgkd7hWdUtlKBD/exec';
 
 async function GET(params) {
   const u = new URL(API);
   Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(u.toString(), {signal: controller.signal});
-    clearTimeout(timer);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-    return j.data;
-  } catch(e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
-    throw e;
-  }
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
 }
 
 async function POST(body) {
+  // ส่งเป็น GET+payload เพื่อหลีกเลี่ยง CORS
   const action = body.action;
   const payload = encodeURIComponent(JSON.stringify(body));
   const u = new URL(API);
   u.searchParams.set('action', action);
   u.searchParams.set('payload', payload);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(u.toString(), {signal: controller.signal});
-    clearTimeout(timer);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
-    return j.data;
-  } catch(e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('หมดเวลา — ตรวจสอบ Apps Script URL');
-    throw e;
-  }
+  const r = await fetch(u.toString());
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'เกิดข้อผิดพลาด');
+  return j.data;
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -281,6 +264,10 @@ const ROLE  = sessionStorage.getItem('rsch_role')     || '';
 (function checkAuth(){
   if(!sessionStorage.getItem('rsch_user')){
     document.getElementById('authBlock').classList.add('show'); return;
+  }
+  // viewer ไม่มีสิทธิ์กรอกฟอร์ม → redirect ไป admin
+  if(ROLE === 'viewer'){
+    window.location.href = 'admin.html'; return;
   }
   document.getElementById('tbUser').textContent = '👤 ' + FNAME;
   if(ROLE === 'admin') document.getElementById('adminBtn').style.display = '';
