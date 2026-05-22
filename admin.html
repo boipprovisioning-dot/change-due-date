@@ -389,12 +389,6 @@ const CC    = 'nsa-team@truecorp.co.th;bo-ip-pro@ericsson.com;tanawat.thinsiriph
 function doLogout(){ sessionStorage.clear(); window.location.href = 'login.html'; }
 setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false}); }, 1000);
 
-,body:JSON.stringify(body)});
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error||'เกิดข้อผิดพลาด');
-  return j.data;
-}
-
 // ── Data ──────────────────────────────────────────────────────
 let allRecs=[], filtered=[], curPage=1, PAGE=15, sortCol='id', sortDir='desc', curId=null;
 
