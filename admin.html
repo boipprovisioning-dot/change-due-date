@@ -1030,19 +1030,27 @@ async function removeUser(username){
 function exportExcel(){
   if(!allRecs.length){ toast('ยังไม่มีข้อมูล','err'); return; }
   try{
-    const headers=['#','วันที่บันทึก','ผู้บันทึก','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','เบอร์ผู้ส่ง','Email ผู้ส่ง','RD_Reason_Desc','ชื่อ PM/AE','เบอร์ PM/AE','Remark','สถานะ Email'];
-    const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'ดำเนินการแล้ว':'รอดำเนินการ']);
+    const headers=['#','Date','By','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','Phone','Email','RD_Reason_Desc','PM/AE Name','PM/AE Phone','Remark','Email Status'];
+    const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'Done':'Pending']);
     const wb=XLSX.utils.book_new();
     const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-    ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,18].map(w=>({wch:w}));
-    XLSX.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
+    ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,12].map(w=>({wch:w}));
+    // ชื่อ Sheet ต้องเป็น ASCII ไม่เกิน 31 ตัว
+    XLSX.utils.book_append_sheet(wb,ws,'Records');
     const sc={},rc={};
-    allRecs.forEach(r=>{sc[r.staff||'—']=(sc[r.staff||'—']||0)+1; rc[r.rd_reason||'—']=(rc[r.rd_reason||'—']||0)+1;});
-    const wsS=XLSX.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
-    XLSX.utils.book_append_sheet(wb,'สรุป',wsS);
+    allRecs.forEach(r=>{sc[r.staff||'-']=(sc[r.staff||'-']||0)+1; rc[r.rd_reason||'-']=(rc[r.rd_reason||'-']||0)+1;});
+    const summaryRows=[
+      ['Staff Summary'],['Staff','Count'],
+      ...Object.entries(sc).sort((a,b)=>b[1]-a[1]),
+      [],[],
+      ['Reason Summary'],['RD_Reason_Desc','Count'],
+      ...Object.entries(rc).sort((a,b)=>b[1]-a[1])
+    ];
+    const wsS=XLSX.utils.aoa_to_sheet(summaryRows);
+    wsS['!cols']=[{wch:50},{wch:10}];
+    XLSX.utils.book_append_sheet(wb,wsS,'Summary');
     const now=new Date();
     const fname=`reschedule_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
-    // ใช้ Blob + <a> download แทน XLSX.writeFile เพื่อให้ทำงานได้ทุก environment
     const wbOut=XLSX.write(wb,{bookType:'xlsx',type:'array'});
     const blob=new Blob([wbOut],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const url=URL.createObjectURL(blob);
@@ -1051,8 +1059,8 @@ function exportExcel(){
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1000);
     toast('ส่งออก Excel สำเร็จ ('+allRecs.length+' รายการ)');
-  }catch(e){
-    toast('Export ไม่สำเร็จ: '+e.message,'err');
+  }catch(ex){
+    toast('Export ไม่สำเร็จ: '+(ex.message||ex),'err');
   }
 }
 
