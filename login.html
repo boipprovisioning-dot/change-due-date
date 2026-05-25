@@ -144,9 +144,8 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
       <div class="alert a-err" id="regErr" style="margin-bottom:.875rem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span id="regErrTxt"></span></div>
       <div style="font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem">สิทธิ์ที่ต้องการ</div>
       <div class="role-row">
-        <div class="role-opt sel" id="roleUser" onclick="selRole('user')"><div class="ro-icon">👤</div><div class="ro-label">เจ้าหน้าที่</div><div class="ro-sub">กรอกฟอร์มเลื่อนนัด</div></div>
+        <div class="role-opt sel" id="roleUser" onclick="selRole('user')"><div class="ro-icon">👤</div><div class="ro-label">เจ้าหน้าที่</div><div class="ro-sub">กรอกฟอร์ม + ดูข้อมูล + Export</div></div>
         <div class="role-opt" id="roleAdmin" onclick="selRole('admin')"><div class="ro-icon">🛡️</div><div class="ro-label">Admin</div><div class="ro-sub">จัดการข้อมูลทั้งหมด</div></div>
-        <div class="role-opt" id="roleViewer" onclick="selRole('viewer')" style="grid-column:1/-1"><div class="ro-icon">👁️</div><div class="ro-label">Viewer</div><div class="ro-sub">ดูและ Export ข้อมูลได้ ไม่สามารถแก้ไขได้</div></div>
       </div>
       <div class="mfg"><label>ชื่อ-นามสกุล <span style="color:var(--c400)">*</span></label><input class="plain" type="text" id="rFull" placeholder="ชื่อ-นามสกุล"></div>
       <div class="mfg"><label>Username <span style="color:var(--c400)">*</span></label><input class="plain" type="text" id="rUser" placeholder="ภาษาอังกฤษ/ตัวเลข ไม่มีช่องว่าง"></div>
@@ -225,10 +224,8 @@ async function doLogin(){
     if(user.role==='admin'){
       sessionStorage.setItem('rsch_admin','true');
       window.location.href='admin.html';
-    } else if(user.role==='viewer'){
-      // viewer เข้า admin ได้ แต่ไม่ set rsch_admin=true (ตรวจ role แยก)
-      window.location.href='admin.html';
     } else {
+      // user role: กรอกฟอร์ม + ดูข้อมูล + Export
       window.location.href='reschedule_form.html';
     }
   }catch(err){
@@ -245,7 +242,6 @@ function selRole(r){
   regRole=r;
   document.getElementById('roleUser').classList.toggle('sel',r==='user');
   document.getElementById('roleAdmin').classList.toggle('sel',r==='admin');
-  document.getElementById('roleViewer').classList.toggle('sel',r==='viewer');
 }
 async function submitReg(){
   document.getElementById('regOk').classList.remove('show');document.getElementById('regErr').classList.remove('show');

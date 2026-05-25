@@ -265,12 +265,9 @@ const ROLE  = sessionStorage.getItem('rsch_role')     || '';
   if(!sessionStorage.getItem('rsch_user')){
     document.getElementById('authBlock').classList.add('show'); return;
   }
-  // viewer ไม่มีสิทธิ์กรอกฟอร์ม → redirect ไป admin
-  if(ROLE === 'viewer'){
-    window.location.href = 'admin.html'; return;
-  }
   document.getElementById('tbUser').textContent = '👤 ' + FNAME;
-  if(ROLE === 'admin') document.getElementById('adminBtn').style.display = '';
+  // user และ admin เห็นปุ่ม Admin Dashboard
+  document.getElementById('adminBtn').style.display = '';
   loadCount();
 })();
 
