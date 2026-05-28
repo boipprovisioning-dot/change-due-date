@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--b50:#E6F1FB;--b100:#B5D4F4;--b400:#378ADD;--b600:#185FA5;--b800:#0C447C;--b900:#042C53;--c50:#FAECE7;--c100:#F5C4B3;--c400:#D85A30;--c600:#993C1D;--t50:#E1F5EE;--t100:#9FE1CB;--t400:#1D9E75;--t600:#0F6E56;--a50:#FAEEDA;--a100:#FAC775;--a400:#EF9F27;--a600:#854F0B;--p50:#F0EDFB;--p100:#C9BFF0;--p400:#7C5CBF;--p600:#5438A0;--g50:#F7F6F2;--g100:#EEEDE8;--g200:#D8D7D0;--g300:#C4C3BB;--g500:#888780;--g600:#5F5E5A;--g700:#4A4A47;--g900:#1C1C1A}
@@ -152,6 +153,8 @@ tr:hover td{background:var(--g50)}
 .period-btn{transition:all .15s}
 .period-btn.on{background:var(--b600);border-color:var(--b600);color:#fff}
 .period-btn.on:hover{background:var(--b800);border-color:var(--b800)}
+.rpt-pb.on{background:var(--b600);border-color:var(--b600);color:#fff}
+.rpt-pb.on:hover{background:var(--b800);border-color:var(--b800)}
 /* Chart container */
 .chart-wrap{background:#fff;border:1px solid var(--g200);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem}
 .chart-wrap canvas{max-height:320px}
@@ -189,6 +192,7 @@ tr:hover td{background:var(--g50)}
       <div class="ni" id="ni2" onclick="aTab('users')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>จัดการ User<span class="ni-badge" id="pendNb" style="display:none">0</span></div>
       <div class="nav-sec">เครื่องมือ</div>
       <div class="ni" onclick="exportExcel()"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>ส่งออก Excel</div>
+      <div class="ni" id="ni3" onclick="aTab('report')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Export Report</div>
       <div class="ni" onclick="confClearAll()" id="niClearAll" style="color:rgba(216,90,48,.75)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>ล้างข้อมูลทั้งหมด</div>
     </nav>
     <div class="sb-bot">
@@ -288,6 +292,73 @@ tr:hover td{background:var(--g50)}
       <div class="appr-card">
         <div class="tc-hdr"><div class="tc-title">👥 ผู้ใช้งานในระบบ</div><span class="tc-cnt" id="uApprCnt">0 คน</span></div>
         <div class="tw"><table><thead><tr><th>ชื่อ</th><th>Username</th><th>Role</th><th>Email</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead><tbody id="uApprTable"><tr class="loading-row"><td colspan="6">⏳ กำลังโหลด...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Report Export -->
+    <div id="tabReport" class="content" style="display:none">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+        <div>
+          <div style="font-size:18px;font-weight:600;color:var(--g900);margin-bottom:.25rem">📊 Export รายงานสรุป</div>
+          <div style="font-size:13px;color:var(--g500)">สร้าง PowerPoint Presentation สำหรับนำเสนอหัวหน้า</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end">
+          <div style="background:#fff;border:1px solid var(--g200);border-radius:12px;padding:.875rem 1.25rem">
+            <div style="font-size:10px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.625rem">เลือกช่วงเวลา</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-sm rpt-pb" data-rp="week" onclick="setRptPeriod('week')">สัปดาห์นี้</button>
+              <button class="btn-sm rpt-pb on" data-rp="month" onclick="setRptPeriod('month')">เดือนนี้</button>
+              <button class="btn-sm rpt-pb" data-rp="year" onclick="setRptPeriod('year')">ปีนี้</button>
+              <button class="btn-sm rpt-pb" data-rp="all" onclick="setRptPeriod('all')">ทั้งหมด</button>
+            </div>
+          </div>
+          <button class="btn-sm" id="rptExportBtn" onclick="generatePPTX()" style="background:var(--b600);border-color:var(--b600);color:#fff;padding:10px 20px;font-size:14px;border-radius:10px">
+            <div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:none" id="rptSpin"></div>
+            <svg id="rptIcon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><polyline points="9 15 12 18 15 15"/></svg>
+            <span id="rptTxt">Export PowerPoint</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="sg" id="rptStats">
+        <div class="sc bl"><div class="sc-acc"></div><div class="sc-label">รายการในช่วงที่เลือก</div><div class="sc-val" id="rptTotal">—</div><div class="sc-sub">รายการ</div></div>
+        <div class="sc tl"><div class="sc-acc"></div><div class="sc-label">ดำเนินการแล้ว</div><div class="sc-val" id="rptSent">—</div><div class="sc-sub">ส่ง Email แล้ว</div></div>
+        <div class="sc co"><div class="sc-acc"></div><div class="sc-label">รอดำเนินการ</div><div class="sc-val" id="rptPend">—</div><div class="sc-sub">ยังไม่ส่ง Email</div></div>
+        <div class="sc am"><div class="sc-acc"></div><div class="sc-label">Staff ที่บันทึก</div><div class="sc-val" id="rptStaff">—</div><div class="sc-sub">คน</div></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid" style="margin-bottom:1rem">
+        <div class="chart-wrap">
+          <div class="chart-title"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span id="rptChartTitle">แนวโน้มรายเดือน</span></div>
+          <canvas id="rptChartBar" style="max-height:260px"></canvas>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>สัดส่วนตาม Staff</div>
+          <canvas id="rptChartPie" style="max-height:260px"></canvas>
+        </div>
+      </div>
+
+      <!-- Top Reasons -->
+      <div style="background:#fff;border:1px solid var(--g200);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+        <div style="font-size:13px;font-weight:600;color:var(--g900);margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+          🏆 เหตุผลที่เลื่อนนัดมากที่สุด
+          <span style="background:var(--p50);color:var(--p600);font-size:11px;padding:2px 8px;border-radius:20px;border:1px solid var(--p100)" id="rptTopN">Top 0</span>
+        </div>
+        <div id="rptReasons"></div>
+      </div>
+
+      <!-- Preview Table -->
+      <div class="tc">
+        <div class="tc-hdr">
+          <div class="tc-title">ตัวอย่างรายการ (แสดง 20 รายการแรก)</div>
+          <span class="tc-cnt" id="rptTblCnt">0 รายการ</span>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>#</th><th>วันที่</th><th>Circuit</th><th>Customer</th><th>Due Date</th><th>Change Date</th><th>Staff</th><th>เหตุผล</th><th>สถานะ</th></tr></thead>
+          <tbody id="rptTableBody"></tbody>
+        </table></div>
       </div>
     </div>
   </div>
@@ -1029,49 +1100,30 @@ async function removeUser(username){
 // ── Export Excel ──────────────────────────────────────────────
 function exportExcel(){
   if(!allRecs.length){ toast('ยังไม่มีข้อมูล','err'); return; }
-  try{
-    const headers=['#','Date','By','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','Phone','Email','RD_Reason_Desc','PM/AE Name','PM/AE Phone','Remark','Email Status'];
-    const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'Done':'Pending']);
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-    ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,12].map(w=>({wch:w}));
-    // ชื่อ Sheet ต้องเป็น ASCII ไม่เกิน 31 ตัว
-    XLSX.utils.book_append_sheet(wb,ws,'Records');
-    const sc={},rc={};
-    allRecs.forEach(r=>{sc[r.staff||'-']=(sc[r.staff||'-']||0)+1; rc[r.rd_reason||'-']=(rc[r.rd_reason||'-']||0)+1;});
-    const summaryRows=[
-      ['Staff Summary'],['Staff','Count'],
-      ...Object.entries(sc).sort((a,b)=>b[1]-a[1]),
-      [],[],
-      ['Reason Summary'],['RD_Reason_Desc','Count'],
-      ...Object.entries(rc).sort((a,b)=>b[1]-a[1])
-    ];
-    const wsS=XLSX.utils.aoa_to_sheet(summaryRows);
-    wsS['!cols']=[{wch:50},{wch:10}];
-    XLSX.utils.book_append_sheet(wb,wsS,'Summary');
-    const now=new Date();
-    const fname=`reschedule_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
-    const wbOut=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    const blob=new Blob([wbOut],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url; a.download=fname; a.style.display='none';
-    document.body.appendChild(a); a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1000);
-    toast('ส่งออก Excel สำเร็จ ('+allRecs.length+' รายการ)');
-  }catch(ex){
-    toast('Export ไม่สำเร็จ: '+(ex.message||ex),'err');
-  }
+  const headers=['#','วันที่บันทึก','ผู้บันทึก','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','เบอร์ผู้ส่ง','Email ผู้ส่ง','RD_Reason_Desc','ชื่อ PM/AE','เบอร์ PM/AE','Remark','สถานะ Email'];
+  const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'ดำเนินการแล้ว':'รอดำเนินการ']);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,18].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
+  const sc={},rc={};
+  allRecs.forEach(r=>{sc[r.staff||'—']=(sc[r.staff||'—']||0)+1; rc[r.rd_reason||'—']=(rc[r.rd_reason||'—']||0)+1;});
+  const wsS=XLSX.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
+  XLSX.utils.book_append_sheet(wb,'สรุป',wsS);
+  const now=new Date();
+  XLSX.writeFile(wb,`reschedule_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`);
+  toast('ส่งออก Excel สำเร็จ ('+allRecs.length+' รายการ)');
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
 function aTab(tab){
   if(tab==='users' && !IS_ADMIN){ toast('คุณไม่มีสิทธิ์เข้าหน้าจัดการ User','err'); return; }
-  ['tabRecords','tabStats','tabUsers'].forEach((id,i)=>document.getElementById(id).style.display=(['records','stats','users'][i]===tab?'':'none'));
-  document.querySelectorAll('.ni').forEach((el,i)=>el.classList.toggle('on',i===['records','stats','users'].indexOf(tab)));
-  document.getElementById('pageTitle').textContent={records:'รายการเลื่อนนัดทั้งหมด',stats:'สถิติสรุป',users:'จัดการผู้ใช้งาน'}[tab]||'';
+  ['tabRecords','tabStats','tabUsers','tabReport'].forEach((id,i)=>document.getElementById(id).style.display=(['records','stats','users','report'][i]===tab?'':'none'));
+  document.querySelectorAll('.ni').forEach((el,i)=>el.classList.toggle('on',i===['records','stats','users','report'].indexOf(tab)));
+  document.getElementById('pageTitle').textContent={records:'รายการเลื่อนนัดทั้งหมด',stats:'สถิติสรุป',users:'จัดการผู้ใช้งาน',report:'Export Report'}[tab]||'';
   if(tab==='users') renderUsers();
   if(tab==='stats') renderCharts();
+  if(tab==='report') renderReport();
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -1081,6 +1133,264 @@ function toast(msg,type=''){
   t.className='toast'+(type?' '+type:''); t.innerHTML=`<div class="tdot"></div>${msg}`; c.appendChild(t);
   setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); },4500);
 }
+
+// ── Report Export ─────────────────────────────────────────────
+let rptPeriod = 'month';
+let rptChartBar = null, rptChartPie = null;
+const THAI_MONTHS_R = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const RPT_COLORS = ['378ADD','1D9E75','EF9F27','D85A30','7C5CBF','0C447C','0F6E56','854F0B','993C1D','5438A0'];
+
+function setRptPeriod(p){
+  rptPeriod=p;
+  document.querySelectorAll('.rpt-pb').forEach(b=>b.classList.toggle('on',b.dataset.rp===p));
+  renderReport();
+}
+
+function getRptFiltered(){
+  const now=new Date();
+  if(rptPeriod==='week'){const s=new Date(now);s.setDate(now.getDate()-now.getDay());s.setHours(0,0,0,0);return allRecs.filter(r=>parseTimestamp(r.timestamp)>=s);}
+  if(rptPeriod==='month'){return allRecs.filter(r=>parseTimestamp(r.timestamp)>=new Date(now.getFullYear(),now.getMonth(),1));}
+  if(rptPeriod==='year'){return allRecs.filter(r=>parseTimestamp(r.timestamp)>=new Date(now.getFullYear(),0,1));}
+  return allRecs;
+}
+
+function parseTimestamp(ts){
+  if(!ts) return new Date(0);
+  const m=ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{2}:\d{2}))?/);
+  if(m) return new Date(`${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}T${m[4]||'00:00'}:00`);
+  if(/^\d{4}-\d{2}-\d{2}/.test(ts)) return new Date(ts);
+  return new Date(0);
+}
+
+function getRptPeriodLabel(){
+  const now=new Date();
+  if(rptPeriod==='week') return 'สัปดาห์นี้';
+  if(rptPeriod==='month') return `เดือน ${THAI_MONTHS_R[now.getMonth()]} ${now.getFullYear()}`;
+  if(rptPeriod==='year') return `ปี ${now.getFullYear()}`;
+  return 'ทั้งหมด';
+}
+
+function renderReport(){
+  if(!document.getElementById('tabReport')) return;
+  const recs=getRptFiltered();
+  const total=recs.length, sent=recs.filter(r=>r.emailStatus==='sent').length;
+  const pend=total-sent, staffCount=new Set(recs.map(r=>r.staff).filter(Boolean)).size;
+
+  document.getElementById('rptTotal').textContent=total;
+  document.getElementById('rptSent').textContent=sent;
+  document.getElementById('rptPend').textContent=pend;
+  document.getElementById('rptStaff').textContent=staffCount;
+  document.getElementById('rptTblCnt').textContent=`${total} รายการ`;
+
+  // Reasons
+  const rd={};
+  recs.forEach(r=>{rd[r.rd_reason||'—']=(rd[r.rd_reason||'—']||0)+1;});
+  const topR=Object.entries(rd).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const maxV=topR[0]?.[1]||1;
+  document.getElementById('rptTopN').textContent=`Top ${topR.length}`;
+  const RANK_COLORS=['var(--a400)','var(--g300)','var(--c400)'];
+  document.getElementById('rptReasons').innerHTML=topR.map(([k,v],i)=>{
+    const pct=total?Math.round(v/total*100):0;
+    const short=k.length>70?k.substring(0,68)+'…':k;
+    return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem">
+      <div style="width:22px;height:22px;border-radius:6px;background:${RANK_COLORS[i]||'var(--g200)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;font-size:12px;color:var(--g700);min-width:0">${short}</div>
+      <div style="background:var(--g100);border-radius:4px;height:8px;width:120px;overflow:hidden;flex-shrink:0"><div style="height:100%;border-radius:4px;background:var(--b400);width:${Math.round(v/maxV*100)}%"></div></div>
+      <div style="font-size:12px;font-weight:600;color:var(--b600);min-width:24px;text-align:right">${v}</div>
+    </div>`;
+  }).join('');
+
+  // Preview table
+  document.getElementById('rptTableBody').innerHTML=recs.slice(0,20).map((r,i)=>`<tr>
+    <td><span class="badge bb">${i+1}</span></td>
+    <td style="font-size:11px;color:var(--g500)">${fmtDate(r.timestamp)||'—'}</td>
+    <td><span class="mono">${r.circuit||'—'}</span></td>
+    <td style="font-size:12px;font-weight:500">${r.customer||'—'}</td>
+    <td style="font-size:11px">${fmtDate(r.due_date)||'—'}</td>
+    <td style="font-size:11px;color:var(--t600);font-weight:500">${fmtDate(r.new_due_date)||'—'}</td>
+    <td style="font-size:11px">${(r.staff||'').split('_')[1]||r.staff||'—'}</td>
+    <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.rd_reason||''}">${(r.rd_reason||'—').split('_')[0]||'—'}</td>
+    <td>${r.emailStatus==='sent'?'<span class="sdot sent"><span class="dot"></span>แล้ว</span>':'<span class="sdot pend"><span class="dot"></span>รอ</span>'}</td>
+  </tr>`).join('');
+
+  // Charts
+  setTimeout(()=>{
+    // Bar chart
+    const bCtx=document.getElementById('rptChartBar');
+    if(bCtx){
+      if(rptChartBar){rptChartBar.destroy();rptChartBar=null;}
+      let labels, data;
+      if(rptPeriod==='week'){
+        const now=new Date(), days={};
+        for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const k=d.toDateString();days[k]={label:`${d.getDate()}/${d.getMonth()+1}`,count:0};}
+        recs.forEach(r=>{const d=parseTimestamp(r.timestamp);const k=d.toDateString();if(k in days)days[k].count++;});
+        labels=Object.values(days).map(x=>x.label); data=Object.values(days).map(x=>x.count);
+        document.getElementById('rptChartTitle').textContent='แนวโน้มรายวัน (สัปดาห์นี้)';
+      } else {
+        const mmap={};
+        recs.forEach(r=>{if(!r.timestamp)return;const d=parseTimestamp(r.timestamp);if(isNaN(d))return;const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;mmap[k]=(mmap[k]||0)+1;});
+        const sk=Object.keys(mmap).sort();
+        labels=sk.map(k=>{const[y,m]=k.split('-');return`${THAI_MONTHS_R[parseInt(m)-1]} ${y}`;});
+        data=sk.map(k=>mmap[k]);
+        document.getElementById('rptChartTitle').textContent=rptPeriod==='month'?'แนวโน้มรายวันในเดือนนี้':'แนวโน้มรายเดือน';
+      }
+      rptChartBar=new Chart(bCtx,{type:'bar',data:{labels:labels.length?labels:['ไม่มีข้อมูล'],datasets:[{label:'จำนวน',data:data.length?data:[0],backgroundColor:'rgba(55,138,221,0.75)',borderRadius:6,borderSkipped:false,borderWidth:0}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y} รายการ`}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}});
+    }
+    // Pie chart
+    const pCtx=document.getElementById('rptChartPie');
+    if(pCtx){
+      if(rptChartPie){rptChartPie.destroy();rptChartPie=null;}
+      const sd={};
+      recs.forEach(r=>{const n=(r.staff||'—').split('_')[1]||(r.staff||'—');sd[n]=(sd[n]||0)+1;});
+      const se=Object.entries(sd).sort((a,b)=>b[1]-a[1]);
+      const COLORS=['#378ADD','#1D9E75','#EF9F27','#D85A30','#7C5CBF','#0C447C','#0F6E56','#854F0B'];
+      rptChartPie=new Chart(pCtx,{type:'doughnut',data:{labels:se.map(([k])=>k),datasets:[{data:se.map(([,v])=>v),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:10,padding:6}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed} รายการ`}}}}});
+    }
+  }, 60);
+}
+
+async function generatePPTX(){
+  const recs=getRptFiltered();
+  if(!recs.length){toast('ไม่มีข้อมูลในช่วงเวลาที่เลือก','err');return;}
+  const btn=document.getElementById('rptExportBtn');
+  const spin=document.getElementById('rptSpin');
+  const icon=document.getElementById('rptIcon');
+  const txt=document.getElementById('rptTxt');
+  btn.disabled=true; spin.style.display='block'; icon.style.display='none'; txt.textContent='กำลังสร้าง...';
+  try{
+    const pptx=new PptxGenJS();
+    pptx.layout='LAYOUT_WIDE';
+    pptx.author='NSA Team';
+    pptx.title='รายงานระบบเลื่อนนัดติดตั้ง';
+    const periodLabel=getRptPeriodLabel();
+    const now=new Date();
+    const dateStr=`${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+    const total=recs.length, sent=recs.filter(r=>r.emailStatus==='sent').length, pend=total-sent;
+    const sentPct=total?Math.round(sent/total*100):0;
+    const rd={};recs.forEach(r=>{rd[r.rd_reason||'—']=(rd[r.rd_reason||'—']||0)+1;});
+    const topR=Object.entries(rd).sort((a,b)=>b[1]-a[1]).slice(0,7);
+    const sd={};recs.forEach(r=>{const n=(r.staff||'—').split('_')[1]||(r.staff||'—');sd[n]=(sd[n]||0)+1;});
+    const staffData=Object.entries(sd).sort((a,b)=>b[1]-a[1]);
+    const DARK='042C53',MID='185FA5',LIGHT='378ADD',TEAL='1D9E75',AMBER='EF9F27',RED='D85A30',PURPLE='7C5CBF',WHITE='FFFFFF',GRAY='888780',LGRAY='F7F6F2',BDR='D8D7D0';
+    const CCOLS=['378ADD','1D9E75','EF9F27','D85A30','7C5CBF','0C447C','0F6E56','854F0B','993C1D','5438A0'];
+
+    // ─ Slide 1: Cover ─
+    {const s=pptx.addSlide();s.background={color:DARK};
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:.18,h:7.5,fill:{color:LIGHT},line:{color:LIGHT}});
+    s.addShape(pptx.shapes.OVAL,{x:9.2,y:-1.2,w:4,h:4,fill:{color:MID,transparency:85},line:{color:MID,transparency:85}});
+    s.addShape(pptx.shapes.OVAL,{x:10.5,y:4.5,w:3,h:3,fill:{color:LIGHT,transparency:90},line:{color:LIGHT,transparency:90}});
+    s.addText('APPOINTMENT RESCHEDULE REPORT',{x:.5,y:1.4,w:8,h:.4,fontSize:11,bold:true,color:'B5D4F4',charSpacing:5,fontFace:'Calibri'});
+    s.addText('รายงานสรุปการเลื่อนนัดติดตั้ง',{x:.5,y:1.95,w:9,h:1.1,fontSize:40,bold:true,color:WHITE,fontFace:'Calibri'});
+    s.addShape(pptx.shapes.ROUNDED_RECTANGLE,{x:.5,y:3.15,w:2.8,h:.45,fill:{color:LIGHT,transparency:20},line:{color:LIGHT},rectRadius:.1});
+    s.addText(periodLabel,{x:.5,y:3.15,w:2.8,h:.45,fontSize:14,bold:true,color:WHITE,align:'center',fontFace:'Calibri'});
+    s.addShape(pptx.shapes.LINE,{x:.5,y:3.8,w:4.5,h:0,line:{color:'B5D4F4',width:1.5}});
+    [{val:total,lbl:'รายการทั้งหมด'},{val:sent,lbl:'ดำเนินการแล้ว'},{val:pend,lbl:'รอดำเนินการ'},{val:`${sentPct}%`,lbl:'อัตราสำเร็จ'}].forEach(({val,lbl},i)=>{
+      const x=.5+i*2.0;
+      s.addText(String(val),{x,y:4.1,w:1.8,h:.75,fontSize:32,bold:true,color:WHITE,fontFace:'Calibri',align:'center'});
+      s.addText(lbl,{x,y:4.85,w:1.8,h:.3,fontSize:10,color:'B5D4F4',fontFace:'Calibri',align:'center'});
+    });
+    s.addText(`จัดทำโดย NSA Team  |  ${dateStr}  |  ระบบเลื่อนนัดติดตั้ง`,{x:.5,y:6.8,w:12,h:.35,fontSize:10,color:'88A8C8',fontFace:'Calibri'});}
+
+    // ─ Slide 2: KPI Summary ─
+    {const s=pptx.addSlide();s.background={color:LGRAY};
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:13.3,h:.75,fill:{color:DARK},line:{color:DARK}});
+    s.addText('สรุปภาพรวม (KPI Summary)',{x:.4,y:0,w:9,h:.75,fontSize:16,bold:true,color:WHITE,valign:'middle',fontFace:'Calibri'});
+    s.addText(periodLabel,{x:9,y:0,w:4,h:.75,fontSize:12,color:'B5D4F4',valign:'middle',align:'right',fontFace:'Calibri'});
+    [{val:String(total),lbl:'รายการทั้งหมด',sub:'ในช่วงที่เลือก',top:DARK},{val:String(sent),lbl:'ดำเนินการแล้ว',sub:'ส่ง Email สำเร็จ',top:TEAL},{val:String(pend),lbl:'รอดำเนินการ',sub:'ยังไม่ส่ง Email',top:RED},{val:`${sentPct}%`,lbl:'อัตราความสำเร็จ',sub:'Email Completion',top:AMBER}].forEach(({val,lbl,sub,top},i)=>{
+      const x=.4+i*3.1,y=1.0,w=2.8,h=2.0;
+      s.addShape(pptx.shapes.RECTANGLE,{x,y,w,h,fill:{color:WHITE},line:{color:BDR,pt:.5},shadow:{type:'outer',color:'000000',blur:4,offset:1,angle:135,opacity:.06}});
+      s.addShape(pptx.shapes.RECTANGLE,{x,y,w,h:.08,fill:{color:top},line:{color:top}});
+      s.addText(val,{x,y:y+.22,w,h:.85,fontSize:42,bold:true,color:top,align:'center',fontFace:'Calibri'});
+      s.addText(lbl,{x,y:y+1.05,w,h:.35,fontSize:12,bold:true,color:'1C1C1A',align:'center',fontFace:'Calibri'});
+      s.addText(sub,{x,y:y+1.4,w,h:.3,fontSize:9,color:GRAY,align:'center',fontFace:'Calibri'});
+    });
+    s.addText('สรุปตาม Staff',{x:.4,y:3.35,w:5,h:.35,fontSize:13,bold:true,color:DARK,fontFace:'Calibri'});
+    staffData.slice(0,6).forEach(([name,cnt],i)=>{
+      const pct=total?Math.round(cnt/total*100):0,row=i<3?0:1,col=i%3,x=.4+col*2.1,y=3.85+row*.8;
+      s.addShape(pptx.shapes.RECTANGLE,{x,y,w:1.95,h:.65,fill:{color:WHITE},line:{color:BDR,pt:.5}});
+      s.addText(name,{x:x+.08,y:y+.05,w:1.5,h:.28,fontSize:10,bold:true,color:'1C1C1A',fontFace:'Calibri'});
+      s.addText(`${cnt} รายการ (${pct}%)`,{x:x+.08,y:y+.32,w:1.6,h:.22,fontSize:9,color:GRAY,fontFace:'Calibri'});
+      s.addShape(pptx.shapes.RECTANGLE,{x:x+.08,y:y+.54,w:Math.max(.05,1.7*(pct/100)),h:.06,fill:{color:LIGHT},line:{color:LIGHT}});
+    });
+    s.addText(`ข้อมูล ณ วันที่ ${dateStr}`,{x:.4,y:7.1,w:12,h:.25,fontSize:9,color:GRAY,fontFace:'Calibri'});}
+
+    // ─ Slide 3: Trend Chart ─
+    {const s=pptx.addSlide();s.background={color:WHITE};
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:13.3,h:.75,fill:{color:DARK},line:{color:DARK}});
+    s.addText('แนวโน้มการเลื่อนนัด',{x:.4,y:0,w:9,h:.75,fontSize:16,bold:true,color:WHITE,valign:'middle',fontFace:'Calibri'});
+    s.addText(periodLabel,{x:9,y:0,w:4,h:.75,fontSize:12,color:'B5D4F4',valign:'middle',align:'right',fontFace:'Calibri'});
+    let cl=[],cv=[];
+    if(rptPeriod==='week'){
+      const dn=new Date(),days={};
+      for(let i=6;i>=0;i--){const d=new Date(dn);d.setDate(dn.getDate()-i);const k=d.toDateString();days[k]={label:`${d.getDate()}/${d.getMonth()+1}`,count:0};}
+      recs.forEach(r=>{const d=parseTimestamp(r.timestamp);const k=d.toDateString();if(k in days)days[k].count++;});
+      cl=Object.values(days).map(x=>x.label);cv=Object.values(days).map(x=>x.count);
+    } else {
+      const mm={};
+      recs.forEach(r=>{if(!r.timestamp)return;const d=parseTimestamp(r.timestamp);if(isNaN(d))return;const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;mm[k]=(mm[k]||0)+1;});
+      const sk=Object.keys(mm).sort();
+      cl=sk.map(k=>{const[y,m]=k.split('-');return`${THAI_MONTHS_R[parseInt(m)-1]} ${y}`;});
+      cv=sk.map(k=>mm[k]);
+    }
+    if(cl.length>0){s.addChart(pptx.charts.BAR,[{name:'จำนวน',labels:cl,values:cv}],{x:.4,y:.95,w:12.5,h:5.4,barDir:'col',chartColors:[LIGHT],chartArea:{fill:{color:WHITE}},catAxisLabelColor:GRAY,valAxisLabelColor:GRAY,valGridLine:{color:'E2E8F0',size:.5},catGridLine:{style:'none'},showValue:true,dataLabelColor:'1C1C1A',dataLabelFontSize:10,showLegend:false});}
+    s.addText(`ข้อมูล ณ วันที่ ${dateStr}`,{x:.4,y:7.1,w:12,h:.25,fontSize:9,color:GRAY,fontFace:'Calibri'});}
+
+    // ─ Slide 4: Top Reasons ─
+    {const s=pptx.addSlide();s.background={color:LGRAY};
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:13.3,h:.75,fill:{color:DARK},line:{color:DARK}});
+    s.addText('เหตุผลที่เลื่อนนัดมากที่สุด',{x:.4,y:0,w:9,h:.75,fontSize:16,bold:true,color:WHITE,valign:'middle',fontFace:'Calibri'});
+    s.addText(periodLabel,{x:9,y:0,w:4,h:.75,fontSize:12,color:'B5D4F4',valign:'middle',align:'right',fontFace:'Calibri'});
+    if(topR.length>0){s.addChart(pptx.charts.BAR,[{name:'จำนวน',labels:topR.map(([k])=>`[${k.split('_')[0]}]`),values:topR.map(([,v])=>v)}],{x:.4,y:.9,w:6,h:5.5,barDir:'bar',chartColors:CCOLS,chartArea:{fill:{color:WHITE}},catAxisLabelColor:GRAY,valAxisLabelColor:GRAY,valGridLine:{style:'none'},catGridLine:{style:'none'},showValue:true,dataLabelColor:'1C1C1A',dataLabelFontSize:11,showLegend:false});}
+    s.addText('รายละเอียดเหตุผล',{x:6.7,y:.88,w:6,h:.35,fontSize:12,bold:true,color:DARK,fontFace:'Calibri'});
+    const trows=topR.map(([k,v],i)=>{const pct=total?Math.round(v/total*100):0;const short=k.length>55?k.substring(0,53)+'…':k;return[{text:String(i+1),options:{bold:true,color:WHITE,fill:{color:CCOLS[i]||GRAY},align:'center',fontSize:10}},{text:short,options:{fontSize:9,color:'1C1C1A'}},{text:String(v),options:{bold:true,color:MID,align:'center',fontSize:11}},{text:`${pct}%`,options:{color:GRAY,align:'center',fontSize:10}}];});
+    s.addTable([[{text:'#',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:10}},{text:'เหตุผล',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:10}},{text:'จำนวน',options:{bold:true,color:WHITE,fill:{color:DARK},align:'center',fontSize:10}},{text:'%',options:{bold:true,color:WHITE,fill:{color:DARK},align:'center',fontSize:10}}],...trows],{x:6.7,y:1.28,w:6.2,colW:[.4,4.3,.75,.65],border:{pt:.5,color:BDR},rowH:.52});
+    s.addText(`ข้อมูล ณ วันที่ ${dateStr}`,{x:.4,y:7.1,w:12,h:.25,fontSize:9,color:GRAY,fontFace:'Calibri'});}
+
+    // ─ Slide 5: Staff ─
+    {const s=pptx.addSlide();s.background={color:WHITE};
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:13.3,h:.75,fill:{color:DARK},line:{color:DARK}});
+    s.addText('สัดส่วนตาม Staff',{x:.4,y:0,w:9,h:.75,fontSize:16,bold:true,color:WHITE,valign:'middle',fontFace:'Calibri'});
+    s.addText(periodLabel,{x:9,y:0,w:4,h:.75,fontSize:12,color:'B5D4F4',valign:'middle',align:'right',fontFace:'Calibri'});
+    if(staffData.length>0){s.addChart(pptx.charts.DOUGHNUT,[{name:'Staff',labels:staffData.map(([k])=>k),values:staffData.map(([,v])=>v)}],{x:.4,y:.9,w:6.5,h:5.3,chartColors:CCOLS,showLegend:true,legendPos:'r',legendFontSize:11,showPercent:true,chartArea:{fill:{color:WHITE}}});}
+    s.addText('ตารางสรุปตาม Staff',{x:7.2,y:.88,w:5.7,h:.35,fontSize:12,bold:true,color:DARK,fontFace:'Calibri'});
+    const srows=staffData.map(([name,cnt],i)=>{const pct=total?Math.round(cnt/total*100):0;return[{text:String(i+1),options:{align:'center',fontSize:10,color:GRAY}},{text:name,options:{fontSize:10,color:'1C1C1A',bold:i===0}},{text:String(cnt),options:{bold:true,color:MID,align:'center',fontSize:11}},{text:`${pct}%`,options:{color:GRAY,align:'center',fontSize:10}}];});
+    s.addTable([[{text:'#',options:{bold:true,color:WHITE,fill:{color:DARK},align:'center',fontSize:10}},{text:'ชื่อ Staff',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:10}},{text:'รายการ',options:{bold:true,color:WHITE,fill:{color:DARK},align:'center',fontSize:10}},{text:'สัดส่วน',options:{bold:true,color:WHITE,fill:{color:DARK},align:'center',fontSize:10}}],...srows],{x:7.2,y:1.3,w:5.7,colW:[.4,3.8,.85,.65],border:{pt:.5,color:BDR},rowH:.48});
+    s.addText(`ข้อมูล ณ วันที่ ${dateStr}`,{x:.4,y:7.1,w:12,h:.25,fontSize:9,color:GRAY,fontFace:'Calibri'});}
+
+    // ─ Slide 6: Records Table ─
+    {const s=pptx.addSlide();s.background={color:LGRAY};
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:13.3,h:.75,fill:{color:DARK},line:{color:DARK}});
+    s.addText('รายการเลื่อนนัดทั้งหมด',{x:.4,y:0,w:9,h:.75,fontSize:16,bold:true,color:WHITE,valign:'middle',fontFace:'Calibri'});
+    s.addText(`${recs.length} รายการ | ${periodLabel}`,{x:9,y:0,w:4,h:.75,fontSize:12,color:'B5D4F4',valign:'middle',align:'right',fontFace:'Calibri'});
+    const show20=recs.slice(0,20);
+    const tdata=show20.map((r,i)=>{const isSent=r.emailStatus==='sent';return[{text:String(i+1),options:{align:'center',fontSize:9,color:GRAY}},{text:r.circuit||'—',options:{fontSize:9,bold:true,color:MID}},{text:r.customer||'—',options:{fontSize:9,color:'1C1C1A'}},{text:fmtDate(r.due_date)||'—',options:{fontSize:8,color:GRAY}},{text:fmtDate(r.new_due_date)||'—',options:{fontSize:9,bold:true,color:TEAL}},{text:(r.staff||'').split('_')[1]||(r.staff||'—'),options:{fontSize:9,color:'1C1C1A'}},{text:(r.rd_reason||'—').split('_')[0]||'—',options:{fontSize:8,color:GRAY}},{text:isSent?'สำเร็จ':'รอดำเนินการ',options:{align:'center',fontSize:9,bold:true,color:isSent?TEAL:RED}},];});
+    s.addTable([[{text:'#',options:{bold:true,color:WHITE,fill:{color:DARK},align:'center',fontSize:9}},{text:'Circuit',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:9}},{text:'Customer',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:9}},{text:'Due Date',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:9}},{text:'Change Date',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:9}},{text:'Staff',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:9}},{text:'เหตุผล',options:{bold:true,color:WHITE,fill:{color:DARK},fontSize:9}},{text:'สถานะ',options:{bold:true,color:WHITE,fill:{color:DARK},align:'center',fontSize:9}}],...tdata],{x:.35,y:.9,w:12.6,colW:[.3,1.6,1.9,1.1,1.1,1.7,3.2,1.0],border:{pt:.5,color:BDR},rowH:.4});
+    if(recs.length>20){s.addText(`* แสดง 20 รายการแรก จากทั้งหมด ${recs.length} รายการ`,{x:.35,y:7.0,w:12,h:.3,fontSize:9,color:GRAY,italic:true,fontFace:'Calibri'});}
+    s.addText(`ข้อมูล ณ วันที่ ${dateStr}`,{x:.4,y:7.2,w:12,h:.25,fontSize:9,color:GRAY,fontFace:'Calibri'});}
+
+    // ─ Slide 7: Closing ─
+    {const s=pptx.addSlide();s.background={color:DARK};
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:.18,h:7.5,fill:{color:TEAL},line:{color:TEAL}});
+    s.addShape(pptx.shapes.OVAL,{x:9.2,y:-1.2,w:4,h:4,fill:{color:TEAL,transparency:90},line:{color:TEAL,transparency:90}});
+    s.addText('สรุป',{x:.5,y:1.5,w:9,h:.5,fontSize:14,bold:true,color:'9FE1CB',charSpacing:4,fontFace:'Calibri'});
+    s.addText([{text:'ช่วงเวลา: ',options:{bold:false}},{text:periodLabel,options:{bold:true}}],{x:.5,y:2.1,w:11,h:.55,fontSize:24,color:WHITE,fontFace:'Calibri'});
+    const summLines=[`รายการทั้งหมด ${total} รายการ`,`ดำเนินการแล้ว ${sent} รายการ (${sentPct}%)`,`รอดำเนินการ ${pend} รายการ`,topR[0]?`เหตุผลหลัก: [${topR[0][0].split('_')[0]}] — ${topR[0][1]} ครั้ง`:'',staffData[0]?`Staff บันทึกมากสุด: ${staffData[0][0]} (${staffData[0][1]} รายการ)`:''  ].filter(Boolean);
+    summLines.forEach((line,i)=>{s.addText(`◆  ${line}`,{x:.6,y:2.9+i*.58,w:11,h:.5,fontSize:14,color:'B5D4F4',fontFace:'Calibri'});});
+    s.addShape(pptx.shapes.LINE,{x:.5,y:6.5,w:4,h:0,line:{color:'378ADD',width:1}});
+    s.addText(`จัดทำโดย NSA Team  |  ${dateStr}  |  ระบบเลื่อนนัดติดตั้ง`,{x:.5,y:6.65,w:12,h:.3,fontSize:10,color:'88A8C8',fontFace:'Calibri'});}
+
+    const ps={week:'week',month:'month',year:'year',all:'all'}[rptPeriod];
+    const fname=`reschedule_report_${ps}_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.pptx`;
+    await pptx.writeFile({fileName:fname});
+    toast(`✅ Export สำเร็จ! "${fname}"`,'');
+  }catch(e){
+    console.error(e);
+    toast('Export ไม่สำเร็จ: '+e.message,'err');
+  }finally{
+    btn.disabled=false;spin.style.display='none';icon.style.display='';txt.textContent='Export PowerPoint';
+  }
+}
+
 </script>
 </body>
 </html>
