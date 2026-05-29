@@ -1111,19 +1111,32 @@ async function removeUser(username){
 // ── Export Excel ──────────────────────────────────────────────
 function exportExcel(){
   if(!allRecs.length){ toast('ยังไม่มีข้อมูล','err'); return; }
-  const headers=['#','วันที่บันทึก','ผู้บันทึก','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','เบอร์ผู้ส่ง','Email ผู้ส่ง','RD_Reason_Desc','ชื่อ PM/AE','เบอร์ PM/AE','Remark','สถานะ Email'];
-  const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'ดำเนินการแล้ว':'รอดำเนินการ']);
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-  ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,18].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
-  const sc={},rc={};
-  allRecs.forEach(r=>{sc[r.staff||'—']=(sc[r.staff||'—']||0)+1; rc[r.rd_reason||'—']=(rc[r.rd_reason||'—']||0)+1;});
-  const wsS=XLSX.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
-  XLSX.utils.book_append_sheet(wb,'สรุป',wsS);
-  const now=new Date();
-  XLSX.writeFile(wb,`reschedule_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`);
-  toast('ส่งออก Excel สำเร็จ ('+allRecs.length+' รายการ)');
+  try{
+    const headers=['#','วันที่บันทึก','ผู้บันทึก','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','เบอร์ผู้ส่ง','Email ผู้ส่ง','RD_Reason_Desc','ชื่อ PM/AE','เบอร์ PM/AE','Remark','สถานะ Email'];
+    const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'ดำเนินการแล้ว':'รอดำเนินการ']);
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+    ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,18].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
+    const sc={},rc={};
+    allRecs.forEach(r=>{sc[r.staff||'—']=(sc[r.staff||'—']||0)+1; rc[r.rd_reason||'—']=(rc[r.rd_reason||'—']||0)+1;});
+    const wsS=XLSX.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
+    XLSX.utils.book_append_sheet(wb,'สรุป',wsS);
+    const now=new Date();
+    const fname=`reschedule_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
+    // Browser-safe download: write as array buffer then trigger anchor download
+    const wbOut=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const blob=new Blob([wbOut],{type:'application/octet-stream'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=fname; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);
+    toast('ส่งออก Excel สำเร็จ ('+allRecs.length+' รายการ)');
+  }catch(e){
+    console.error('exportExcel error:',e);
+    toast('Export Excel ไม่สำเร็จ: '+e.message,'err');
+  }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -1391,6 +1404,67 @@ async function generatePPTX(){
     summLines.forEach((line,i)=>{s.addText(`◆  ${line}`,{x:.6,y:2.9+i*.58,w:11,h:.5,fontSize:14,color:'B5D4F4',fontFace:'Calibri'});});
     s.addShape(pptx.shapes.LINE,{x:.5,y:6.5,w:4,h:0,line:{color:'378ADD',width:1}});
     s.addText(`จัดทำโดย NSA Team  |  ${dateStr}  |  ระบบเลื่อนนัดติดตั้ง`,{x:.5,y:6.65,w:12,h:.3,fontSize:10,color:'88A8C8',fontFace:'Calibri'});}
+
+    // ─ Slide 8: AI Analysis ─
+    txt.textContent='กำลังวิเคราะห์ด้วย AI...';
+    let aiInsight='';
+    try{
+      // Build summary for AI
+      const topR3=topR.slice(0,3).map(([k,v])=>`[${k.split('_')[0]}] ${v} ครั้ง`).join(', ');
+      const staff3=staffData.slice(0,3).map(([n,v])=>`${n} (${v} รายการ)`).join(', ');
+      const prompt=`คุณเป็นผู้เชี่ยวชาญด้านการบริหารงานติดตั้งโทรคมนาคม วิเคราะห์ข้อมูลการเลื่อนนัดติดตั้งต่อไปนี้และให้ข้อเสนอแนะเชิงปฏิบัติเป็นภาษาไทย\n\nข้อมูลสรุป:\n- ช่วงเวลา: ${periodLabel}\n- รายการทั้งหมด: ${total} รายการ\n- ดำเนินการแล้ว (Email): ${sent} รายการ (${sentPct}%)\n- รอดำเนินการ: ${pend} รายการ\n- เหตุผลหลัก (Top 3): ${topR3||'ไม่มีข้อมูล'}\n- Staff ที่บันทึกมากสุด: ${staff3||'ไม่มีข้อมูล'}\n\nกรุณาวิเคราะห์และให้:\n1. ข้อสังเกตสำคัญ 2-3 ข้อ\n2. ความเสี่ยงที่ควรระวัง 1-2 ข้อ\n3. ข้อเสนอแนะในการปรับปรุง 2-3 ข้อ\n\nตอบกระชับ ไม่เกิน 200 คำ แต่ละหัวข้อขึ้นบรรทัดใหม่ใช้ • นำหน้า`;
+      const aiResp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:1000,
+          messages:[{role:'user',content:prompt}]
+        })
+      });
+      const aiData=await aiResp.json();
+      aiInsight=aiData.content?.find(b=>b.type==='text')?.text||'';
+    }catch(aiErr){
+      console.warn('AI analysis failed:',aiErr);
+      aiInsight='ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้';
+    }
+
+    {const s=pptx.addSlide();s.background={color:'0A1628'};
+    // Header bar
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:13.3,h:.75,fill:{color:'0F2440'},line:{color:'0F2440'}});
+    s.addShape(pptx.shapes.RECTANGLE,{x:0,y:0,w:.18,h:7.5,fill:{color:PURPLE},line:{color:PURPLE}});
+    s.addText('🤖  AI Analysis',{x:.4,y:0,w:7,h:.75,fontSize:16,bold:true,color:WHITE,valign:'middle',fontFace:'Calibri'});
+    s.addText('วิเคราะห์โดย Claude AI',{x:8,y:0,w:5,h:.75,fontSize:11,color:'C9BFF0',valign:'middle',align:'right',fontFace:'Calibri'});
+    // Context box
+    s.addShape(pptx.shapes.ROUNDED_RECTANGLE,{x:.35,y:.9,w:12.6,h:.7,fill:{color:'101D30'},line:{color:'1E3A5A',pt:.8},rectRadius:.08});
+    s.addText(`ช่วงข้อมูล: ${periodLabel}  |  ${total} รายการ  |  Email Success ${sentPct}%  |  Staff ${staffData.length} คน`,{x:.5,y:.9,w:12.3,h:.7,fontSize:11,color:'B5D4F4',valign:'middle',fontFace:'Calibri'});
+    // AI badge
+    s.addShape(pptx.shapes.ROUNDED_RECTANGLE,{x:.35,y:1.75,w:1.8,h:.35,fill:{color:PURPLE},line:{color:PURPLE},rectRadius:.06});
+    s.addText('✦ AI Insights',{x:.35,y:1.75,w:1.8,h:.35,fontSize:10,bold:true,color:WHITE,align:'center',fontFace:'Calibri'});
+    // Parse and display AI lines
+    const aiLines=aiInsight.split('\n').filter(l=>l.trim());
+    const maxLines=Math.min(aiLines.length,12);
+    let yPos=2.22;
+    let lastSection='';
+    for(let i=0;i<maxLines;i++){
+      const line=aiLines[i].trim();
+      if(!line)continue;
+      // Detect section headers (digits followed by .)
+      const isHeader=/^[123][.。]/.test(line)||/^(ข้อสังเกต|ความเสี่ยง|ข้อเสนอแนะ)/.test(line);
+      if(isHeader){
+        s.addText(line,{x:.5,y:yPos,w:12.2,h:.38,fontSize:12,bold:true,color:'C9BFF0',fontFace:'Calibri'});
+        yPos+=.4;
+      } else {
+        const isBullet=line.startsWith('•')||line.startsWith('-')||line.startsWith('◆');
+        const txt2=isBullet?line:('• '+line);
+        s.addText(txt2,{x:.6,y:yPos,w:12,h:.38,fontSize:11,color:WHITE,fontFace:'Calibri'});
+        yPos+=.4;
+      }
+      if(yPos>6.8)break;
+    }
+    // Footer
+    s.addShape(pptx.shapes.LINE,{x:.35,y:7.05,w:12.6,h:0,line:{color:'1E3A5A',width:.8}});
+    s.addText(`Generated by Claude AI  |  ${dateStr}  |  ระบบเลื่อนนัดติดตั้ง`,{x:.4,y:7.1,w:12,h:.25,fontSize:9,color:'4A6A8A',fontFace:'Calibri'});}
 
     const ps={week:'week',month:'month',year:'year',all:'all'}[rptPeriod];
     const fname=`reschedule_report_${ps}_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.pptx`;
