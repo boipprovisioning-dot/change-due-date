@@ -6,6 +6,7 @@
 <title>Admin Dashboard — ระบบเลื่อนนัด</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>/* Save XLSX reference before PptxGenJS bundle loads (it contains babel polyfill that can conflict) */window.__XLSX_SAVED = typeof XLSX !== 'undefined' ? XLSX : null;</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>/* PptxGenJS 3.12.0 embedded */
 (function(root) {
@@ -16,6 +17,10 @@
   // expose to global scope
   if (typeof PptxGenJS !== 'undefined') {
     root.PptxGenJS = PptxGenJS;
+  }
+  /* Restore XLSX if PptxGenJS bundle clobbered it */
+  if (window.__XLSX_SAVED && (typeof XLSX === 'undefined' || !XLSX.utils)) {
+    window.XLSX = window.__XLSX_SAVED;
   }
 })(typeof window !== 'undefined' ? window : this);
 </script>
@@ -1112,20 +1117,23 @@ async function removeUser(username){
 function exportExcel(){
   if(!allRecs.length){ toast('ยังไม่มีข้อมูล','err'); return; }
   try{
+    // Get XLSX - try multiple sources in case PptxGenJS bundle conflicted
+    const XLSXLib = window.__XLSX_SAVED || window.XLSX || (typeof XLSX !== 'undefined' ? XLSX : null);
+    if(!XLSXLib || !XLSXLib.utils){ toast('ไม่สามารถโหลด XLSX library ได้','err'); return; }
     const headers=['#','วันที่บันทึก','ผู้บันทึก','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','เบอร์ผู้ส่ง','Email ผู้ส่ง','RD_Reason_Desc','ชื่อ PM/AE','เบอร์ PM/AE','Remark','สถานะ Email'];
     const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'ดำเนินการแล้ว':'รอดำเนินการ']);
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+    const wb=XLSXLib.utils.book_new();
+    const ws=XLSXLib.utils.aoa_to_sheet([headers,...rows]);
     ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,18].map(w=>({wch:w}));
-    XLSX.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
+    XLSXLib.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
     const sc={},rc={};
     allRecs.forEach(r=>{sc[r.staff||'—']=(sc[r.staff||'—']||0)+1; rc[r.rd_reason||'—']=(rc[r.rd_reason||'—']||0)+1;});
-    const wsS=XLSX.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
-    XLSX.utils.book_append_sheet(wb,'สรุป',wsS);
+    const wsS=XLSXLib.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
+    XLSXLib.utils.book_append_sheet(wb,'สรุป',wsS);
     const now=new Date();
     const fname=`reschedule_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
     // Browser-safe download: write as array buffer then trigger anchor download
-    const wbOut=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const wbOut=XLSXLib.write(wb,{bookType:'xlsx',type:'array'});
     const blob=new Blob([wbOut],{type:'application/octet-stream'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
@@ -1415,18 +1423,23 @@ async function generatePPTX(){
       const prompt=`คุณเป็นผู้เชี่ยวชาญด้านการบริหารงานติดตั้งโทรคมนาคม วิเคราะห์ข้อมูลการเลื่อนนัดติดตั้งต่อไปนี้และให้ข้อเสนอแนะเชิงปฏิบัติเป็นภาษาไทย\n\nข้อมูลสรุป:\n- ช่วงเวลา: ${periodLabel}\n- รายการทั้งหมด: ${total} รายการ\n- ดำเนินการแล้ว (Email): ${sent} รายการ (${sentPct}%)\n- รอดำเนินการ: ${pend} รายการ\n- เหตุผลหลัก (Top 3): ${topR3||'ไม่มีข้อมูล'}\n- Staff ที่บันทึกมากสุด: ${staff3||'ไม่มีข้อมูล'}\n\nกรุณาวิเคราะห์และให้:\n1. ข้อสังเกตสำคัญ 2-3 ข้อ\n2. ความเสี่ยงที่ควรระวัง 1-2 ข้อ\n3. ข้อเสนอแนะในการปรับปรุง 2-3 ข้อ\n\nตอบกระชับ ไม่เกิน 200 คำ แต่ละหัวข้อขึ้นบรรทัดใหม่ใช้ • นำหน้า`;
       const aiResp=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{
+          'Content-Type':'application/json',
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
         body:JSON.stringify({
           model:'claude-sonnet-4-20250514',
           max_tokens:1000,
           messages:[{role:'user',content:prompt}]
         })
       });
+      if(!aiResp.ok){ const errText=await aiResp.text(); throw new Error('API Error '+aiResp.status+': '+errText); }
       const aiData=await aiResp.json();
       aiInsight=aiData.content?.find(b=>b.type==='text')?.text||'';
     }catch(aiErr){
       console.warn('AI analysis failed:',aiErr);
-      aiInsight='ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้';
+      aiInsight='ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้ ('+aiErr.message+')';
     }
 
     {const s=pptx.addSlide();s.background={color:'0A1628'};
