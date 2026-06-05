@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard — ระบบเลื่อนนัด</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>/* Save XLSX reference before PptxGenJS bundle loads (it contains babel polyfill that can conflict) */window.__XLSX_SAVED = typeof XLSX !== 'undefined' ? XLSX : null;</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>/* PptxGenJS 3.12.0 embedded */
 (function(root) {
@@ -18,12 +16,10 @@
   if (typeof PptxGenJS !== 'undefined') {
     root.PptxGenJS = PptxGenJS;
   }
-  /* Restore XLSX if PptxGenJS bundle clobbered it */
-  if (window.__XLSX_SAVED && (typeof XLSX === 'undefined' || !XLSX.utils)) {
-    window.XLSX = window.__XLSX_SAVED;
-  }
 })(typeof window !== 'undefined' ? window : this);
 </script>
+<!-- XLSX loaded AFTER PptxGenJS so its Array.prototype polyfills don't affect XLSX internals -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--b50:#E6F1FB;--b100:#B5D4F4;--b400:#378ADD;--b600:#185FA5;--b800:#0C447C;--b900:#042C53;--c50:#FAECE7;--c100:#F5C4B3;--c400:#D85A30;--c600:#993C1D;--t50:#E1F5EE;--t100:#9FE1CB;--t400:#1D9E75;--t600:#0F6E56;--a50:#FAEEDA;--a100:#FAC775;--a400:#EF9F27;--a600:#854F0B;--p50:#F0EDFB;--p100:#C9BFF0;--p400:#7C5CBF;--p600:#5438A0;--g50:#F7F6F2;--g100:#EEEDE8;--g200:#D8D7D0;--g300:#C4C3BB;--g500:#888780;--g600:#5F5E5A;--g700:#4A4A47;--g900:#1C1C1A}
@@ -1117,27 +1113,23 @@ async function removeUser(username){
 function exportExcel(){
   if(!allRecs.length){ toast('ยังไม่มีข้อมูล','err'); return; }
   try{
-    // Get XLSX - try multiple sources in case PptxGenJS bundle conflicted
-    const XLSXLib = window.__XLSX_SAVED || window.XLSX || (typeof XLSX !== 'undefined' ? XLSX : null);
-    if(!XLSXLib || !XLSXLib.utils){ toast('ไม่สามารถโหลด XLSX library ได้','err'); return; }
+    if(typeof XLSX === 'undefined' || !XLSX.utils){ toast('ไม่สามารถโหลด XLSX library ได้ กรุณา Refresh หน้า','err'); return; }
     const headers=['#','วันที่บันทึก','ผู้บันทึก','Circuit','Customer Name','Due Date','Change Due Date','Staff Code_Name','เบอร์ผู้ส่ง','Email ผู้ส่ง','RD_Reason_Desc','ชื่อ PM/AE','เบอร์ PM/AE','Remark','สถานะ Email'];
     const rows=allRecs.map((r,i)=>[i+1,r.timestamp,r.submittedBy||'',r.circuit,r.customer,r.due_date,r.new_due_date,r.staff,r.sender_phone,r.sender_email||'',r.rd_reason,r.ae_name,r.ae_phone,r.remark||'',r.emailStatus==='sent'?'ดำเนินการแล้ว':'รอดำเนินการ']);
-    const wb=XLSXLib.utils.book_new();
-    const ws=XLSXLib.utils.aoa_to_sheet([headers,...rows]);
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
     ws['!cols']=[4,18,14,18,22,12,12,28,14,28,45,18,14,30,18].map(w=>({wch:w}));
-    XLSXLib.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
+    XLSX.utils.book_append_sheet(wb,'เลื่อนนัด',ws);
     const sc={},rc={};
     allRecs.forEach(r=>{sc[r.staff||'—']=(sc[r.staff||'—']||0)+1; rc[r.rd_reason||'—']=(rc[r.rd_reason||'—']||0)+1;});
-    const wsS=XLSXLib.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
-    XLSXLib.utils.book_append_sheet(wb,'สรุป',wsS);
+    const wsS=XLSX.utils.aoa_to_sheet([['สรุปตาม Staff'],['Staff','จำนวน'],...Object.entries(sc).sort((a,b)=>b[1]-a[1]),[],[],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน'],...Object.entries(rc).sort((a,b)=>b[1]-a[1])]);
+    XLSX.utils.book_append_sheet(wb,'สรุป',wsS);
     const now=new Date();
     const fname=`reschedule_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
-    // Browser-safe download: write as array buffer then trigger anchor download
-    const wbOut=XLSXLib.write(wb,{bookType:'xlsx',type:'array'});
+    const wbOut=XLSX.write(wb,{bookType:'xlsx',type:'array'});
     const blob=new Blob([wbOut],{type:'application/octet-stream'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url; a.download=fname; a.style.display='none';
+    const a=document.createElement('a'); a.href=url; a.download=fname; a.style.display='none';
     document.body.appendChild(a); a.click();
     setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);
     toast('ส่งออก Excel สำเร็จ ('+allRecs.length+' รายการ)');
