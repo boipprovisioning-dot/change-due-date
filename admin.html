@@ -6,6 +6,36 @@
 <title>Admin Dashboard — ระบบเลื่อนนัด</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── บันทึก native Array methods ก่อน PptxGenJS polyfill ทับ ──
+window.__nativeArrayProto = {
+  indexOf:    Array.prototype.indexOf,
+  forEach:    Array.prototype.forEach,
+  map:        Array.prototype.map,
+  filter:     Array.prototype.filter,
+  reduce:     Array.prototype.reduce,
+  slice:      Array.prototype.slice,
+  splice:     Array.prototype.splice,
+  push:       Array.prototype.push,
+  pop:        Array.prototype.pop,
+  shift:      Array.prototype.shift,
+  unshift:    Array.prototype.unshift,
+  concat:     Array.prototype.concat,
+  join:       Array.prototype.join,
+  sort:       Array.prototype.sort,
+  find:       Array.prototype.find,
+  findIndex:  Array.prototype.findIndex,
+  includes:   Array.prototype.includes,
+  some:       Array.prototype.some,
+  every:      Array.prototype.every,
+  flat:       Array.prototype.flat,
+  flatMap:    Array.prototype.flatMap
+};
+window.__restoreArrayProto = function(){
+  var p = window.__nativeArrayProto;
+  Object.keys(p).forEach(function(k){ Array.prototype[k] = p[k]; });
+};
+</script>
 <script>/* PptxGenJS 3.12.0 embedded */
 (function(root) {
 /* PptxGenJS 3.12.0 @ 2023-03-20T03:12:31.375Z */
@@ -1114,12 +1144,16 @@ function exportExcel(){
   if(!allRecs.length){ toast('ยังไม่มีข้อมูล','err'); return; }
   if(typeof XLSX === 'undefined' || !XLSX.utils){ toast('ไม่สามารถโหลด XLSX library ได้ กรุณา Refresh หน้า','err'); return; }
 
+  // restore native Array methods ที่ PptxGenJS polyfill ทับไว้
+  if(window.__restoreArrayProto) window.__restoreArrayProto();
+
   toast('กำลังสร้างไฟล์ Excel...','inf');
 
-  // ใช้ setTimeout เพื่อ escape จาก PptxGenJS polyfill context
   setTimeout(function(){
     try{
-      // helper: แปลงค่าให้เป็น string ปลอดภัย (หลีกเลี่ยง null/undefined)
+      // restore อีกครั้งใน setTimeout context
+      if(window.__restoreArrayProto) window.__restoreArrayProto();
+
       function safe(v){ return (v===null||v===undefined)?'':String(v); }
 
       // ── Sheet 1: รายการทั้งหมด ──
@@ -1147,23 +1181,27 @@ function exportExcel(){
 
       // ── Sheet 2: สรุป ──
       var sc={}, rc={};
-      allRecs.forEach(function(r){
-        var sk=safe(r.staff)||'—';  sc[sk]=(sc[sk]||0)+1;
-        var rk=safe(r.rd_reason)||'—'; rc[rk]=(rc[rk]||0)+1;
-      });
-      var scArr=[], rcArr=[];
-      Object.keys(sc).forEach(function(k){scArr.push([k,sc[k]]);});
-      Object.keys(rc).forEach(function(k){rcArr.push([k,rc[k]]);});
+      for(var j=0;j<allRecs.length;j++){
+        var rr=allRecs[j];
+        var sk=safe(rr.staff)||'—';    sc[sk]=(sc[sk]||0)+1;
+        var rk=safe(rr.rd_reason)||'—'; rc[rk]=(rc[rk]||0)+1;
+      }
+      var scArr=[], rcArr=[], ks, ki;
+      ks=Object.keys(sc); for(ki=0;ki<ks.length;ki++) scArr.push([ks[ki],sc[ks[ki]]]);
+      ks=Object.keys(rc); for(ki=0;ki<ks.length;ki++) rcArr.push([ks[ki],rc[ks[ki]]]);
       scArr.sort(function(a,b){return b[1]-a[1];});
       rcArr.sort(function(a,b){return b[1]-a[1];});
-      var aoaS=[['สรุปตาม Staff'],['Staff','จำนวน']].concat(scArr).concat([[],[]]).concat([['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน']]).concat(rcArr);
+      var aoaS=[['สรุปตาม Staff'],['Staff','จำนวน']];
+      for(ki=0;ki<scArr.length;ki++) aoaS.push(scArr[ki]);
+      aoaS.push([],['สรุปตามเหตุผล'],['RD_Reason_Desc','จำนวน']);
+      for(ki=0;ki<rcArr.length;ki++) aoaS.push(rcArr[ki]);
       var wsS=XLSX.utils.aoa_to_sheet(aoaS);
       XLSX.utils.book_append_sheet(wb,'สรุป',wsS);
 
       // ── Write & Download ──
-      var now=new Date();
-      var mm=String(now.getMonth()+1).padStart(2,'0'), dd=String(now.getDate()).padStart(2,'0');
-      var fname='reschedule_'+now.getFullYear()+mm+dd+'.xlsx';
+      var now2=new Date();
+      var mm=String(now2.getMonth()+1).padStart(2,'0'), dd=String(now2.getDate()).padStart(2,'0');
+      var fname='reschedule_'+now2.getFullYear()+mm+dd+'.xlsx';
       var wbOut=XLSX.write(wb,{bookType:'xlsx',type:'array'});
       var blob=new Blob([wbOut],{type:'application/octet-stream'});
       var url=URL.createObjectURL(blob);
