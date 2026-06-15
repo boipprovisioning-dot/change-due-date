@@ -1179,28 +1179,6 @@ function exportExcel(){
       ]));
     }
 
-    // ── สรุปตาม Staff ──
-    var sc={}, rc={};
-    for(var j=0;j<allRecs.length;j++){
-      var rj=allRecs[j];
-      var sk=rj.staff||'—'; sc[sk]=(sc[sk]||0)+1;
-      var rk=rj.rd_reason||'—'; rc[rk]=(rc[rk]||0)+1;
-    }
-    lines.push('');
-    lines.push(csvRow(['สรุปตาม Staff','']));
-    lines.push(csvRow(['Staff','จำนวน']));
-    var scKeys=Object.keys(sc);
-    // เรียงมากไปน้อย
-    scKeys.sort(function(a,b){return sc[b]-sc[a];});
-    for(var si=0;si<scKeys.length;si++) lines.push(csvRow([scKeys[si],sc[scKeys[si]]]));
-
-    lines.push('');
-    lines.push(csvRow(['สรุปตามเหตุผล','']));
-    lines.push(csvRow(['RD_Reason_Desc','จำนวน']));
-    var rcKeys=Object.keys(rc);
-    rcKeys.sort(function(a,b){return rc[b]-rc[a];});
-    for(var ri=0;ri<rcKeys.length;ri++) lines.push(csvRow([rcKeys[ri],rc[rcKeys[ri]]]));
-
     // ── Download ── (BOM \uFEFF ทำให้ Excel เปิดภาษาไทยได้)
     var csv='\uFEFF'+lines.join('\r\n');
     var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
