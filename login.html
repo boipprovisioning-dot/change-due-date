@@ -54,6 +54,8 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
 .divider::before{left:0}.divider::after{right:0}
 .btn-sec{width:100%;padding:10px;background:transparent;border:1.5px solid var(--g200);border-radius:10px;color:var(--g700);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;transition:all .2s}
 .btn-sec:hover{background:var(--g100);border-color:var(--g300)}
+.forgot-link{background:none;border:none;color:var(--b600);font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;padding:2px 0}
+.forgot-link:hover{text-decoration:underline}
 .foot{text-align:center;margin-top:1.125rem;font-size:11px;color:rgba(255,255,255,.2)}
 .ov{display:none;position:fixed;inset:0;background:rgba(4,44,83,.6);z-index:300;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(3px)}
 .ov.show{display:flex}
@@ -116,13 +118,16 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
         <input type="text" id="uname" placeholder="กรอก Username" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('pw').focus()">
       </div>
     </div>
-    <div class="fg" style="margin-bottom:1.25rem">
+    <div class="fg" style="margin-bottom:.5rem">
       <label>Password</label>
       <div class="iw">
         <svg class="fi" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         <input type="password" id="pw" placeholder="กรอก Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
         <button class="pw-btn" onclick="tpw('pw','eye1')"><svg id="eye1" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
+    </div>
+    <div style="text-align:right;margin-bottom:1.25rem">
+      <button type="button" class="forgot-link" onclick="openForgot()">ลืม Password?</button>
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()">
       <div class="spin" id="spin"></div><span id="loginTxt">เข้าสู่ระบบ</span>
@@ -155,6 +160,38 @@ input.err{border-color:var(--c400)!important;box-shadow:0 0 0 3px rgba(216,90,48
       <div class="mfg"><label>Email (รับแจ้งผลอนุมัติ)</label><input class="plain" type="text" id="rEmail" placeholder="อีเมลของคุณ (ถ้ามี)"></div>
     </div>
     <div class="mf"><button class="btn-sm" onclick="closeReg()">ยกเลิก</button><button class="btn-sm btn-ok" id="regBtn" onclick="submitReg()">ส่งคำขอสมัคร</button></div>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="ov" id="fpOv" onclick="if(event.target===this)closeForgot()">
+  <div class="modal">
+    <div class="mh"><div class="mt">🔑 ลืมรหัสผ่าน</div><button class="mcl" onclick="closeForgot()">✕</button></div>
+    <div class="mb">
+      <div class="minfo">กรอก Username ของคุณ ระบบจะส่ง <strong>รหัสผ่านชั่วคราว</strong> ไปยังอีเมลที่ลงทะเบียนไว้ จากนั้นให้เข้าสู่ระบบและตั้งรหัสใหม่ทันที</div>
+      <div class="alert a-ok" id="fpOk" style="margin-bottom:.875rem"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span id="fpOkTxt">ส่งรหัสชั่วคราวเรียบร้อย</span></div>
+      <div class="alert a-err" id="fpErr" style="margin-bottom:.875rem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span id="fpErrTxt"></span></div>
+      <div class="mfg"><label>Username <span style="color:var(--c400)">*</span></label><input class="plain" type="text" id="fpUser" placeholder="กรอก Username ของคุณ" onkeydown="if(event.key==='Enter')submitForgot()"></div>
+    </div>
+    <div class="mf"><button class="btn-sm" onclick="closeForgot()">ปิด</button><button class="btn-sm btn-ok" id="fpBtn" onclick="submitForgot()">ส่งรหัสชั่วคราว</button></div>
+  </div>
+</div>
+
+<!-- Change Password Modal (บังคับเปลี่ยนหลัง login ด้วยรหัสชั่วคราว) -->
+<div class="ov" id="cpOv">
+  <div class="modal">
+    <div class="mh"><div class="mt">🔒 ตั้งรหัสผ่านใหม่</div></div>
+    <div class="mb">
+      <div class="minfo">เพื่อความปลอดภัย กรุณาตั้ง <strong>รหัสผ่านใหม่</strong> ก่อนเข้าใช้งาน</div>
+      <div class="alert a-err" id="cpErr" style="margin-bottom:.875rem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span id="cpErrTxt"></span></div>
+      <div class="mfg"><label>รหัสผ่านใหม่ <span style="color:var(--c400)">*</span></label>
+        <div class="iw"><input type="password" id="cpNew" placeholder="อย่างน้อย 6 ตัวอักษร"><button class="pw-btn" onclick="tpw('cpNew','eye3')"><svg id="eye3" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      </div>
+      <div class="mfg"><label>ยืนยันรหัสผ่านใหม่ <span style="color:var(--c400)">*</span></label>
+        <div class="iw"><input type="password" id="cpConfirm" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" onkeydown="if(event.key==='Enter')submitChangePw()"><button class="pw-btn" onclick="tpw('cpConfirm','eye4')"><svg id="eye4" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn-sm btn-ok" id="cpBtn" onclick="submitChangePw()">บันทึกรหัสใหม่และเข้าใช้งาน</button></div>
   </div>
 </div>
 
@@ -207,6 +244,8 @@ function showErr(msg){document.getElementById('errTxt').textContent=msg;document
 function clearAlerts(){['errAlert','pendingAlert'].forEach(id=>document.getElementById(id).classList.remove('show'));['uname','pw'].forEach(id=>document.getElementById(id).classList.remove('err'));}
 function setLoad(on){document.getElementById('loginBtn').disabled=on;document.getElementById('spin').style.display=on?'block':'none';document.getElementById('loginTxt').textContent=on?'กำลังตรวจสอบ...':'เข้าสู่ระบบ';document.getElementById('loginArrow').style.display=on?'none':'';}
 
+let pendingUser=null, pendingTemp='';
+
 async function doLogin(){
 
   clearAlerts();
@@ -216,24 +255,79 @@ async function doLogin(){
   setLoad(true);
   try{
     const user=await GET({action:'login',username:u,password:p});
-    sessionStorage.setItem('rsch_api',API);
-    sessionStorage.setItem('rsch_user','true');
-    sessionStorage.setItem('rsch_username',user.username);
-    sessionStorage.setItem('rsch_fullname',user.fullname||user.username);
-    sessionStorage.setItem('rsch_role',user.role);
-    if(user.role==='admin'){
-      sessionStorage.setItem('rsch_admin','true');
-      window.location.href='admin.html';
-    } else {
-      // user role: กรอกฟอร์ม + ดูข้อมูล + Export
-      window.location.href='reschedule_form.html';
+    if(user.mustChange){
+      // login ด้วยรหัสชั่วคราว → บังคับตั้งรหัสใหม่ก่อนเข้าใช้งาน
+      pendingUser=user; pendingTemp=p;
+      setLoad(false);
+      openChangePw();
+      return;
     }
+    finishLogin(user);
   }catch(err){
     setLoad(false);
     if(err.message==='PENDING') document.getElementById('pendingAlert').classList.add('show');
     else showErr(err.message);
   }
 }
+
+function finishLogin(user){
+  sessionStorage.setItem('rsch_api',API);
+  sessionStorage.setItem('rsch_user','true');
+  sessionStorage.setItem('rsch_username',user.username);
+  sessionStorage.setItem('rsch_fullname',user.fullname||user.username);
+  sessionStorage.setItem('rsch_role',user.role);
+  if(user.role==='admin'){
+    sessionStorage.setItem('rsch_admin','true');
+    window.location.href='admin.html';
+  } else {
+    window.location.href='reschedule_form.html';
+  }
+}
+
+// ── ลืมรหัสผ่าน ──────────────────────────────────────────────
+function openForgot(){
+  ['fpOk','fpErr'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('fpUser').value=document.getElementById('uname').value.trim();
+  document.getElementById('fpOv').classList.add('show');
+  setTimeout(()=>document.getElementById('fpUser').focus(),50);
+}
+function closeForgot(){document.getElementById('fpOv').classList.remove('show');}
+async function submitForgot(){
+  ['fpOk','fpErr'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  const u=document.getElementById('fpUser').value.trim();
+  if(!u){document.getElementById('fpErrTxt').textContent='กรุณากรอก Username';document.getElementById('fpErr').classList.add('show');return;}
+  const btn=document.getElementById('fpBtn');btn.disabled=true;btn.textContent='กำลังส่ง...';
+  try{
+    const res=await POST({action:'forgotPassword',username:u});
+    document.getElementById('fpOkTxt').textContent='ส่งรหัสชั่วคราวไปที่ '+(res&&res.email?res.email:'อีเมลของคุณ')+' แล้ว กรุณาตรวจสอบกล่องจดหมาย';
+    document.getElementById('fpOk').classList.add('show');
+  }catch(err){
+    document.getElementById('fpErrTxt').textContent=err.message;
+    document.getElementById('fpErr').classList.add('show');
+  }finally{btn.disabled=false;btn.textContent='ส่งรหัสชั่วคราว';}
+}
+
+// ── บังคับตั้งรหัสใหม่ ────────────────────────────────────────
+function openChangePw(){
+  document.getElementById('cpErr').classList.remove('show');
+  document.getElementById('cpNew').value='';document.getElementById('cpConfirm').value='';
+  document.getElementById('cpOv').classList.add('show');
+  setTimeout(()=>document.getElementById('cpNew').focus(),50);
+}
+async function submitChangePw(){
+  document.getElementById('cpErr').classList.remove('show');
+  const np=document.getElementById('cpNew').value,cf=document.getElementById('cpConfirm').value;
+  if(np.length<6){showCpErr('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');return;}
+  if(np!==cf){showCpErr('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน');return;}
+  if(np===pendingTemp){showCpErr('กรุณาตั้งรหัสใหม่ที่ต่างจากรหัสชั่วคราว');return;}
+  const btn=document.getElementById('cpBtn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
+  try{
+    await POST({action:'changePassword',username:pendingUser.username,oldPassword:pendingTemp,newPassword:np});
+    document.getElementById('cpOv').classList.remove('show');
+    finishLogin(pendingUser);
+  }catch(err){showCpErr(err.message);btn.disabled=false;btn.textContent='บันทึกรหัสใหม่และเข้าใช้งาน';}
+}
+function showCpErr(msg){document.getElementById('cpErrTxt').textContent=msg;document.getElementById('cpErr').classList.add('show');}
 
 let regRole='user';
 function openReg(){['regOk','regErr'].forEach(id=>document.getElementById(id).classList.remove('show'));['rFull','rUser','rPw','rEmail'].forEach(id=>document.getElementById(id).value='');selRole('user');document.getElementById('regOv').classList.add('show');}
